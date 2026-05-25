@@ -1,0 +1,91 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-001",
+  "result": {
+    "id": "task-apple-health-001",
+    "sessionId": "session-fca-2026-05-14",
+    "status": {
+      "state": "completed",
+      "timestamp": "2026-05-14T08:00:00Z"
+    },
+    "artifacts": [
+      {
+        "artifactId": "calorie-summary-2026-05-08-2026-05-14",
+        "name": "Weekly Calorie Summary",
+        "description": "Active and resting calorie burns for the week of May 8–14 2026",
+        "mimeType": "application/json",
+        "parts": [
+          {
+            "kind": "data",
+            "data": {
+              "period": {
+                "start_date": "2026-05-08",
+                "end_date": "2026-05-14"
+              },
+              "summary": {
+                "total_active_kcal": 2847,
+                "total_resting_kcal": 11536,
+                "total_kcal": 14383,
+                "daily_average_active_kcal": 406.7,
+                "daily_average_resting_kcal": 1648.0,
+                "goal_active_kcal_per_day": 500
+              },
+              "daily_entries": [
+                {
+                  "date": "2026-05-08",
+                  "active_kcal": 312,
+                  "resting_kcal": 1641,
+                  "steps": 7204,
+                  "exercise_minutes": 28
+                },
+                {
+                  "date": "2026-05-09",
+                  "active_kcal": 489,
+                  "resting_kcal": 1658,
+                  "steps": 11032,
+                  "exercise_minutes": 45
+                },
+                {
+                  "date": "2026-05-10",
+                  "active_kcal": 201,
+                  "resting_kcal": 1632,
+                  "steps": 4861,
+                  "exercise_minutes": 12
+                },
+                {
+                  "date": "2026-05-11",
+                  "active_kcal": 534,
+                  "resting_kcal": 1661,
+                  "steps": 12540,
+                  "exercise_minutes": 60
+                },
+                {
+                  "date": "2026-05-12",
+                  "active_kcal": 478,
+                  "resting_kcal": 1655,
+                  "steps": 10888,
+                  "exercise_minutes": 42
+                },
+                {
+                  "date": "2026-05-13",
+                  "active_kcal": 389,
+                  "resting_kcal": 1648,
+                  "steps": 8743,
+                  "exercise_minutes": 35
+                },
+                {
+                  "date": "2026-05-14",
+                  "active_kcal": 444,
+                  "resting_kcal": 1641,
+                  "steps": 9610,
+                  "exercise_minutes": 38
+                }
+              ],
+              "coaching_note": "You hit your 500 kcal active goal on 2 of 7 days. Try a 30-minute walk on lower-activity days to close the gap."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

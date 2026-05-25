@@ -1,0 +1,41 @@
+{
+  "schema_version": "0.2.6",
+  "name": "AppleHealthAgent",
+  "description": "Reads Apple Health calorie and activity data and returns structured summaries for the FitnessCoach app.",
+  "url": "http://localhost:5001/apple-health-agent",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "get_calorie_summary",
+      "name": "Get Calorie Summary",
+      "description": "Returns daily active and resting calorie burns for a requested date range from Apple Health.",
+      "tags": ["health", "calories", "activity"],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Start of the date range (YYYY-MM-DD)"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "description": "End of the date range (YYYY-MM-DD)"
+          }
+        },
+        "required": ["start_date", "end_date"]
+      }
+    }
+  ],
+  "authentication": {
+    "schemes": ["none"]
+  }
+}
