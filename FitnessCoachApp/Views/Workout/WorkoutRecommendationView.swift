@@ -14,7 +14,6 @@ final class WorkoutRecommendationViewModel: ObservableObject {
 
     @Published var state: LoadState = .idle
 
-    // User-tunable inputs (slide 23: intensity selector, time selector)
     @Published var availableMinutes: Int = 25
     @Published var preferredIntensity: WorkoutIntensity = .moderate
     @Published var targetCalories: Double = 500
@@ -29,18 +28,14 @@ final class WorkoutRecommendationViewModel: ObservableObject {
         self.healthProvider = healthProvider
     }
 
-    /// Loads today's active energy from HealthKit (mock or live) and triggers
-    /// a recommendation. Called once on screen appear.
     func onAppear(recentSessions: [WorkoutSessionSummary]) async {
-        // Best-effort HealthKit read. We don't block the recommendation if
-        // it fails — the engine still works with zeros.
         if let snapshot = await healthProvider.fetchWeeklySnapshot(goalActiveKcal: Int(targetCalories)) {
             if let today = snapshot.dailyEntries.last {
                 self.activeEnergyBurned = Double(today.activeKcal)
             }
             self.targetCalories = Double(snapshot.weeklyTotals.goalActiveKcalPerDay)
         }
-        await recommend(recentSessions: recentSessions)
+        // Don't auto-generate — user taps Generate when ready.
     }
 
     func recommend(recentSessions: [WorkoutSessionSummary]) async {
@@ -67,27 +62,34 @@ final class WorkoutRecommendationViewModel: ObservableObject {
 struct WorkoutRecommendationView: View {
     @StateObject private var vm = WorkoutRecommendationViewModel()
     @StateObject private var history = WorkoutHistoryStore()
+    @EnvironmentObject private var workoutVM: WorkoutViewModel
 
     @State private var showingHistory = false
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppConstants.Color.pageBackground.ignoresSafeArea()
+            ZStack(alignment: .top) {
+                PageBackground()
+                HeroWord(text: "TODAY'S PLAN", size: 64, side: .trailing, top: 60, opacity: 0.07)
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: AppConstants.Spacing.lg) {
-                        InputControls(vm: vm, onChange: refreshRecommendation)
+                        InputControlsCard(vm: vm, onGenerate: refreshRecommendation)
                         contentForState
                     }
-                    .padding(AppConstants.Spacing.md)
+                    .padding(.horizontal, AppConstants.Spacing.md)
+                    .padding(.top, 140)
+                    .padding(.bottom, 120)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .scrollIndicators(.hidden)
             }
-            .navigationTitle("Today's Plan")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingHistory = true }) {
                         Image(systemName: "clock.arrow.circlepath")
+                            .foregroundStyle(.white.opacity(0.85))
                     }
                     .accessibilityLabel("Workout history")
                 }
@@ -125,14 +127,16 @@ struct WorkoutRecommendationView: View {
     }
 
     private func refreshRecommendation() {
-        Task {
-            await vm.recommend(recentSessions: history.recentSummaries())
-        }
+        Task { await vm.recommend(recentSessions: history.recentSummaries()) }
     }
 
     private func startWorkout(_ plan: WorkoutPlan) {
+        let now = Date()
+        let calories = Int(plan.estimatedCalories)
+
+        // Save to Plan tab history
         let record = WorkoutSessionRecord(
-            date: Date(),
+            date: now,
             title: plan.title,
             estimatedCalories: plan.estimatedCalories,
             durationMinutes: plan.durationMinutes,
@@ -140,86 +144,280 @@ struct WorkoutRecommendationView: View {
             completed: true
         )
         history.add(record)
+
+        // Mirror into WorkoutViewModel so Health & Progress tabs see the calories.
+        workoutVM.recordExternalSession(
+            workoutName: plan.title,
+            durationMinutes: plan.durationMinutes,
+            caloriesBurned: calories
+        )
+
+        // Write to HealthKit (live device) so the ring updates immediately.
+        Task {
+            try? await workoutVM.healthProvider.writeWorkoutCalories(Double(calories), date: now)
+        }
+
+        // Refresh the Plan tab's own goal ring.
+        Task { await vm.onAppear(recentSessions: history.recentSummaries()) }
     }
 }
 
 // MARK: - Input Controls
 
-private struct InputControls: View {
+private struct InputControlsCard: View {
     @ObservedObject var vm: WorkoutRecommendationViewModel
-    let onChange: () -> Void
+    let onGenerate: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.md) {
-            timeRow
-            intensityRow
-            progressRow
+        VStack(spacing: 12) {
+            FCCard(padding: 18) {
+                VStack(alignment: .leading, spacing: 14) {
+                    FCSectionLabel(text: "Tailor your plan")
+                    timeBlock
+                }
+            }
+
+            FCCard(padding: 18) {
+                VStack(alignment: .leading, spacing: 14) {
+                    FCSectionLabel(text: "Intensity")
+                    intensityBlock
+                }
+            }
+
+            FCCard(padding: 18) {
+                HStack(alignment: .center, spacing: 16) {
+                    goalRing
+                    goalCopy
+                }
+            }
+
+            generateButton
         }
-        .padding(AppConstants.Spacing.md)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
     }
 
-    private var timeRow: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.xs) {
-            HStack {
-                Label("Available time", systemImage: "clock")
-                    .font(.subheadline.bold())
+    // MARK: Time
+
+    private var timeBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Available time")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
                 Spacer()
-                Text("\(vm.availableMinutes) min")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(vm.availableMinutes)")
+                        .font(FCFont.stat(30))
+                        .foregroundStyle(AppConstants.Color.textOnCard)
+                        .contentTransition(.numericText())
+                    Text("MIN")
+                        .font(FCFont.label(11))
+                        .foregroundStyle(AppConstants.Color.mutedOnCard)
+                }
             }
+
             Slider(
                 value: Binding(
                     get: { Double(vm.availableMinutes) },
-                    set: { vm.availableMinutes = Int($0); onChange() }
+                    set: { vm.availableMinutes = Int($0) }
                 ),
                 in: 10...90, step: 5
             )
-        }
-    }
+            .tint(AppConstants.Color.accent)
 
-    private var intensityRow: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.xs) {
-            Label("Intensity", systemImage: "flame")
-                .font(.subheadline.bold())
-            Picker("Intensity", selection: Binding(
-                get: { vm.preferredIntensity },
-                set: { vm.preferredIntensity = $0; onChange() }
-            )) {
-                ForEach(WorkoutIntensity.allCases) { intensity in
-                    Text("\(intensity.emoji) \(intensity.displayName)").tag(intensity)
+            HStack(spacing: 8) {
+                ForEach([15, 30, 45, 60], id: \.self) { preset in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            vm.availableMinutes = preset
+                        }
+                    } label: {
+                        Text("\(preset)m")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(
+                                vm.availableMinutes == preset
+                                ? Color.black
+                                : AppConstants.Color.mutedOnCard
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule()
+                                    .fill(
+                                        vm.availableMinutes == preset
+                                        ? AppConstants.Color.accent
+                                        : AppConstants.Color.cardSecondary
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .pickerStyle(.segmented)
         }
     }
 
-    private var progressRow: some View {
-        let remaining = max(0, vm.targetCalories - vm.activeEnergyBurned)
-        let percent = vm.targetCalories > 0 ? vm.activeEnergyBurned / vm.targetCalories : 0
-        return VStack(alignment: .leading, spacing: AppConstants.Spacing.xs) {
-            HStack {
-                Label("Today's goal", systemImage: "target")
-                    .font(.subheadline.bold())
-                Spacer()
-                Text("\(Int(vm.activeEnergyBurned)) / \(Int(vm.targetCalories)) kcal")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            ProgressView(value: min(percent, 1.0))
-                .tint(percent >= 1.0 ? .green : .orange)
-            if remaining > 0 {
-                Text("\(Int(remaining)) kcal to go")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("Goal met — let's focus on recovery.")
-                    .font(.caption)
-                    .foregroundStyle(.green)
+    // MARK: Intensity
+
+    private var intensityBlock: some View {
+        HStack(spacing: 10) {
+            ForEach(WorkoutIntensity.allCases) { intensity in
+                IntensityTile(
+                    intensity: intensity,
+                    isSelected: vm.preferredIntensity == intensity
+                ) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        vm.preferredIntensity = intensity
+                    }
+                }
             }
         }
+    }
+
+    // MARK: Goal
+
+    private var percent: Double {
+        guard vm.targetCalories > 0 else { return 0 }
+        return min(vm.activeEnergyBurned / vm.targetCalories, 1.0)
+    }
+
+    private var goalRing: some View {
+        ZStack {
+            FCProgressRing(progress: percent, lineWidth: 8, size: 78)
+            VStack(spacing: 0) {
+                Text("\(Int(percent * 100))%")
+                    .font(FCFont.stat(20))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                    .contentTransition(.numericText())
+                Text("GOAL")
+                    .font(FCFont.label(9))
+                    .tracking(1.0)
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+            }
+        }
+    }
+
+    private var goalCopy: some View {
+        let remaining = max(0, vm.targetCalories - vm.activeEnergyBurned)
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("Today's goal")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppConstants.Color.mutedOnCard)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(Int(vm.activeEnergyBurned))")
+                    .font(FCFont.stat(28))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                Text("/ \(Int(vm.targetCalories))")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+                Text("KCAL")
+                    .font(FCFont.label(10))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+            }
+            if remaining > 0 {
+                Text("\(Int(remaining)) kcal to go")
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Goal met — focus on recovery")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(AppConstants.Color.accentDark)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: CTA
+
+    private var generateButton: some View {
+        Button(action: onGenerate) {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .bold))
+                Text("Generate Plan")
+                    .font(.system(size: 16, weight: .bold))
+            }
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [AppConstants.Color.accent, AppConstants.Color.accentDark],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .clipShape(Capsule())
+            .shadow(color: AppConstants.Color.accent.opacity(0.45), radius: 16, y: 4)
+            .shadow(color: AppConstants.Color.accent.opacity(0.25), radius: 4)
+        }
+        .disabled(vm.state == .loading)
+        .opacity(vm.state == .loading ? 0.55 : 1)
+    }
+}
+
+// MARK: - Intensity tile (chunky icon card)
+
+private struct IntensityTile: View {
+    let intensity: WorkoutIntensity
+    let isSelected: Bool
+    let action: () -> Void
+
+    private var icon: String {
+        switch intensity {
+        case .light:    return "leaf.fill"
+        case .moderate: return "flame.fill"
+        case .intense:  return "bolt.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch intensity {
+        case .light:    return AppConstants.Color.accent
+        case .moderate: return AppConstants.Color.warn
+        case .intense:  return AppConstants.Color.danger
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(isSelected ? .black : tint)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(isSelected ? tint : tint.opacity(0.12))
+                    )
+                    .shadow(color: isSelected ? tint.opacity(0.55) : .clear, radius: 10)
+
+                Text(intensity.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(
+                        isSelected
+                        ? AppConstants.Color.textOnCard
+                        : AppConstants.Color.mutedOnCard
+                    )
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isSelected ? tint.opacity(0.10) : AppConstants.Color.cardSecondary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? tint.opacity(0.5) : Color.clear,
+                        lineWidth: 1.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(intensity.displayName) intensity")
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
     }
 }
 
@@ -232,105 +430,282 @@ private struct RecommendedPlanCard: View {
     @State private var showingDetail = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.md) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Recommended for you")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    Text(plan.title)
-                        .font(.title2.bold())
-                }
-                Spacer()
-                Text(plan.intensity.emoji)
-                    .font(.title)
-            }
-
-            HStack(spacing: AppConstants.Spacing.lg) {
-                StatPill(icon: "flame.fill", tint: .orange,
-                         text: "\(Int(plan.estimatedCalories)) kcal")
-                StatPill(icon: "clock", tint: AppConstants.Color.brandDark,
-                         text: "\(plan.durationMinutes) min")
-                StatPill(icon: "bolt.fill", tint: AppConstants.Color.brand,
-                         text: plan.intensity.displayName)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: AppConstants.Spacing.sm) {
-                Text("Blocks")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-                ForEach(plan.exercises) { block in
-                    HStack {
-                        Text(block.role.displayName)
-                            .font(.caption.bold())
-                            .frame(width: 70, alignment: .leading)
-                            .foregroundStyle(.secondary)
-                        Text(block.name)
-                            .font(.subheadline)
-                        Spacer()
-                        Text("\(block.durationMinutes)m")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            if !plan.safetyNotes.isEmpty {
-                VStack(alignment: .leading, spacing: AppConstants.Spacing.xs) {
-                    ForEach(plan.safetyNotes, id: \.self) { note in
-                        Label(note, systemImage: "exclamationmark.shield")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(AppConstants.Spacing.sm)
-                .background(Color.yellow.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.sm))
-            }
-
-            HStack(spacing: AppConstants.Spacing.sm) {
-                Button {
-                    showingDetail = true
-                } label: {
-                    Label("Details", systemImage: "list.bullet.rectangle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
-                Button(action: onStart) {
-                    Label("Mark Done", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-
-            Text("Source: \(plan.sourceProvider)")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            heroPanel
+            bodyPanel
         }
-        .padding(AppConstants.Spacing.md)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
+        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.card, style: .continuous))
+        .shadow(color: AppConstants.Color.accent.opacity(0.25), radius: 22, y: 8)
         .sheet(isPresented: $showingDetail) {
             WorkoutPlanDetailView(plan: plan, onStart: onStart)
         }
     }
+
+    // MARK: Hero (dark gradient with glow icon)
+
+    private var heroPanel: some View {
+        ZStack(alignment: .topLeading) {
+            // Dark teal-black gradient with a soft bloom in the corner.
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.12, blue: 0.12),
+                    Color(red: 0.02, green: 0.07, blue: 0.07),
+                ],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+            RadialGradient(
+                colors: [AppConstants.Color.accent.opacity(0.30), .clear],
+                center: .topTrailing,
+                startRadius: 10,
+                endRadius: 180
+            )
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(AppConstants.Color.accent)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: AppConstants.Color.accent.opacity(0.6), radius: 4)
+                        Text("RECOMMENDED FOR YOU")
+                            .font(FCFont.label(11))
+                            .tracking(1.2)
+                            .foregroundStyle(AppConstants.Color.accent)
+                    }
+                    Spacer()
+                    Image(systemName: planIcon)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 46, height: 46)
+                        .background(
+                            Circle().fill(AppConstants.Color.accent)
+                        )
+                        .shadow(color: AppConstants.Color.accent.opacity(0.55), radius: 12)
+                }
+
+                Text(plan.title.uppercased())
+                    .font(FCFont.hero(30))
+                    .foregroundStyle(.white)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("\(plan.intensity.displayName) · Personalised plan")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.55))
+
+                heroStats
+                    .padding(.top, 6)
+            }
+            .padding(20)
+        }
+    }
+
+    private var heroStats: some View {
+        HStack(spacing: 8) {
+            HeroStatChip(icon: "flame.fill", value: "\(Int(plan.estimatedCalories))", unit: "KCAL", tint: AppConstants.Color.danger)
+            HeroStatChip(icon: "clock.fill",  value: "\(plan.durationMinutes)",       unit: "MIN",  tint: AppConstants.Color.accent)
+            HeroStatChip(icon: "bolt.fill",   value: String(plan.intensity.displayName.prefix(3)).uppercased(), unit: "LVL", tint: AppConstants.Color.warn)
+        }
+    }
+
+    // MARK: Body (white panel, timeline + safety + buttons)
+
+    private var bodyPanel: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            timeline
+            if !plan.safetyNotes.isEmpty { safetyBlock }
+            buttonsRow
+            Text("Source: \(plan.sourceProvider)")
+                .font(.system(size: 10))
+                .foregroundStyle(AppConstants.Color.mutedOnCard)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(
+                colors: [AppConstants.Color.cardPrimary, AppConstants.Color.cardPrimary.opacity(0.96)],
+                startPoint: .top, endPoint: .bottom
+            )
+        )
+    }
+
+    // MARK: Timeline
+
+    private var timeline: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(plan.exercises.enumerated()), id: \.element.id) { idx, block in
+                BlockTimelineRow(
+                    block: block,
+                    isFirst: idx == 0,
+                    isLast: idx == plan.exercises.count - 1
+                )
+            }
+        }
+    }
+
+    private var planIcon: String {
+        switch plan.intensity {
+        case .light: return "leaf.fill"
+        case .moderate: return "flame.fill"
+        case .intense: return "bolt.fill"
+        }
+    }
+
+    private var safetyBlock: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "shield.lefthalf.filled")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppConstants.Color.accentDark)
+                .frame(width: 28, height: 28)
+                .background(AppConstants.Color.accent.opacity(0.15))
+                .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(plan.safetyNotes, id: \.self) { note in
+                    Text(note)
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppConstants.Color.textOnCard.opacity(0.75))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(12)
+        .background(AppConstants.Color.accent.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(AppConstants.Color.accent.opacity(0.20), lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var buttonsRow: some View {
+        HStack(spacing: 12) {
+            Button(action: { showingDetail = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Details")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(AppConstants.Color.textOnCard)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(AppConstants.Color.cardSecondary)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onStart) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("Mark Done")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(AppConstants.Color.accent)
+                .clipShape(Capsule())
+                .shadow(color: AppConstants.Color.accent.opacity(0.35), radius: 10)
+            }
+            .buttonStyle(.plain)
+        }
+    }
 }
 
-private struct StatPill: View {
+// MARK: - Hero stat chip (on dark surface)
+
+private struct HeroStatChip: View {
     let icon: String
+    let value: String
+    let unit: String
     let tint: Color
-    let text: String
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(tint)
-            Text(text)
-                .font(.subheadline.bold())
+            Text(value)
+                .font(FCFont.stat(16))
+                .foregroundStyle(.white)
+            Text(unit)
+                .font(FCFont.label(9))
+                .tracking(0.8)
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            Capsule().fill(Color.white.opacity(0.08))
+        )
+        .overlay(
+            Capsule().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Timeline row
+
+private struct BlockTimelineRow: View {
+    let block: ExerciseBlock
+    let isFirst: Bool
+    let isLast: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            // Connector + dot
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(isFirst ? Color.clear : AppConstants.Color.divider)
+                    .frame(width: 2, height: 10)
+                ZStack {
+                    Circle()
+                        .fill(roleTint.opacity(0.18))
+                        .frame(width: 22, height: 22)
+                    Circle()
+                        .fill(roleTint)
+                        .frame(width: 10, height: 10)
+                        .shadow(color: roleTint.opacity(0.5), radius: 4)
+                }
+                Rectangle()
+                    .fill(isLast ? Color.clear : AppConstants.Color.divider)
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(block.role.displayName.uppercased())
+                        .font(FCFont.label(10))
+                        .tracking(1.0)
+                        .foregroundStyle(roleTint)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(roleTint.opacity(0.12))
+                        .clipShape(Capsule())
+                    Spacer()
+                    Text("\(block.durationMinutes)m")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppConstants.Color.mutedOnCard)
+                }
+                Text(block.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.bottom, isLast ? 0 : 14)
+        }
+    }
+
+    private var roleTint: Color {
+        switch block.role {
+        case .warmUp:   return AppConstants.Color.warn
+        case .main:     return AppConstants.Color.accentDark
+        case .cooldown: return AppConstants.Color.accent
         }
     }
 }
@@ -339,15 +714,16 @@ private struct StatPill: View {
 
 private struct RecommendationLoadingCard: View {
     var body: some View {
-        HStack {
-            ProgressView()
-            Text("Picking the best plan…")
-                .foregroundStyle(.secondary)
+        FCCard {
+            HStack(spacing: 12) {
+                ProgressView()
+                    .tint(AppConstants.Color.accent)
+                Text("Picking the best plan…")
+                    .font(.system(size: 14))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+                Spacer()
+            }
         }
-        .padding(AppConstants.Spacing.lg)
-        .frame(maxWidth: .infinity)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
     }
 }
 
@@ -356,23 +732,28 @@ private struct ErrorCard: View {
     let onRetry: () -> Void
 
     var body: some View {
-        VStack(spacing: AppConstants.Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.title)
-                .foregroundStyle(.orange)
-            Text("Couldn't build a plan")
-                .font(.headline)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Try Again", action: onRetry)
-                .buttonStyle(.borderedProminent)
+        FCCard {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title)
+                    .foregroundStyle(AppConstants.Color.warn)
+                Text("Couldn't build a plan")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+                    .multilineTextAlignment(.center)
+                Button("Try Again", action: onRetry)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(AppConstants.Color.accent)
+                    .clipShape(Capsule())
+            }
+            .frame(maxWidth: .infinity)
         }
-        .padding(AppConstants.Spacing.lg)
-        .frame(maxWidth: .infinity)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
     }
 }
 

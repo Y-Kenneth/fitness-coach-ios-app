@@ -9,19 +9,29 @@ final class WorkoutViewModel: ObservableObject {
     @Published var isSessionActive = false
     @Published var activeWorkout: Workout? = nil
     @Published var sessionElapsedSeconds: Int = 0
+    @Published var isSessionPaused: Bool = false
+    @Published var favoriteWorkoutIDs: Set<UUID> = []
 
     private var timerCancellable: AnyCancellable?
     private let sessionsKey = "fitness.sessions"
+    private let favoritesKey = "fitness.favorites"
     let healthProvider: any HealthDataProvider
 
     init() {
         #if targetEnvironment(simulator)
-        self.healthProvider = MockHealthDataProvider()
+        let mock = MockHealthDataProvider()
+        self.healthProvider = mock
         #else
         self.healthProvider = LiveHealthDataProvider()
         #endif
         workouts = Self.makeSampleWorkouts()
         loadSessions()
+        loadFavorites()
+        #if targetEnvironment(simulator)
+        // Let the mock read sessions on demand so daily kcal always reflects
+        // the live History list (and persists across launches).
+        mock.sessionsProvider = { [weak self] in self?.sessions ?? [] }
+        #endif
     }
 
     var filteredWorkouts: [Workout] {
@@ -54,12 +64,30 @@ final class WorkoutViewModel: ObservableObject {
     func weeklyActivityData() -> [(String, Int)] {
         let calendar = Calendar.current
         let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         return weekdays.enumerated().map { index, label in
             // Calendar weekday: 1=Sun, 2=Mon ... 7=Sat; index 0=Mon maps to weekday 2
             let targetWeekday = index + 2 > 7 ? index + 2 - 7 : index + 2
             let count = sessions.filter { session in
-                calendar.component(.weekday, from: session.date) == targetWeekday
+                session.date >= startOfWeek
+                    && calendar.component(.weekday, from: session.date) == targetWeekday
             }.count
+            return (label, count)
+        }
+    }
+
+    /// Sessions grouped into the four most recent weeks of the current month.
+    /// Returns labels W1–W4 where W4 is the current week.
+    func monthlyActivityData() -> [(String, Int)] {
+        let calendar = Calendar.current
+        guard let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start else {
+            return (1...4).map { ("W\($0)", 0) }
+        }
+        return (0..<4).reversed().map { offset in
+            let weekStart = calendar.date(byAdding: .weekOfYear, value: -offset, to: thisWeekStart) ?? thisWeekStart
+            let weekEnd = calendar.date(byAdding: .weekOfYear, value: 1, to: weekStart) ?? weekStart
+            let count = sessions.filter { $0.date >= weekStart && $0.date < weekEnd }.count
+            let label = "W\(4 - offset)"
             return (label, count)
         }
     }
@@ -67,7 +95,25 @@ final class WorkoutViewModel: ObservableObject {
     func startSession(for workout: Workout) {
         activeWorkout = workout
         isSessionActive = true
+        isSessionPaused = false
         sessionElapsedSeconds = 0
+        startTimer()
+    }
+
+    func pauseSession() {
+        guard isSessionActive, !isSessionPaused else { return }
+        isSessionPaused = true
+        timerCancellable?.cancel()
+        timerCancellable = nil
+    }
+
+    func resumeSession() {
+        guard isSessionActive, isSessionPaused else { return }
+        isSessionPaused = false
+        startTimer()
+    }
+
+    private func startTimer() {
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -98,16 +144,59 @@ final class WorkoutViewModel: ObservableObject {
         }
 
         isSessionActive = false
+        isSessionPaused = false
         activeWorkout = nil
         sessionElapsedSeconds = 0
+    }
+
+    /// Called when a generated plan is marked done from the Plan tab.
+    func recordExternalSession(workoutName: String, durationMinutes: Int, caloriesBurned: Int) {
+        let session = WorkoutSession(
+            workoutID: UUID(),
+            workoutName: workoutName,
+            durationMinutes: durationMinutes,
+            caloriesBurned: caloriesBurned
+        )
+        sessions.insert(session, at: 0)
+        saveSessions()
     }
 
     func cancelSession() {
         timerCancellable?.cancel()
         timerCancellable = nil
         isSessionActive = false
+        isSessionPaused = false
         activeWorkout = nil
         sessionElapsedSeconds = 0
+    }
+
+    // MARK: Favorites
+
+    func isFavorite(_ workout: Workout) -> Bool {
+        favoriteWorkoutIDs.contains(workout.id)
+    }
+
+    func toggleFavorite(_ workout: Workout) {
+        if favoriteWorkoutIDs.contains(workout.id) {
+            favoriteWorkoutIDs.remove(workout.id)
+        } else {
+            favoriteWorkoutIDs.insert(workout.id)
+        }
+        saveFavorites()
+    }
+
+    var favoriteWorkouts: [Workout] {
+        workouts.filter { favoriteWorkoutIDs.contains($0.id) }
+    }
+
+    private func saveFavorites() {
+        let ids = favoriteWorkoutIDs.map { $0.uuidString }
+        UserDefaults.standard.set(ids, forKey: favoritesKey)
+    }
+
+    private func loadFavorites() {
+        guard let ids = UserDefaults.standard.array(forKey: favoritesKey) as? [String] else { return }
+        favoriteWorkoutIDs = Set(ids.compactMap(UUID.init(uuidString:)))
     }
 
     private func saveSessions() {

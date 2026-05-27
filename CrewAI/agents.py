@@ -16,7 +16,7 @@ from crewai import LLM
 # ── Connect to Ollama on Windows Laptop ────────────────────────────────────────
 WINDOWS_IP = "10.24.135.89"
 ollama_llm = LLM(
-    model="ollama/gemma4:latest",
+    model="ollama/llama3.2:3b",
     base_url=f"http://{WINDOWS_IP}:11434"
 )
 

@@ -23,6 +23,7 @@ protocol HealthDataProvider {
     func checkPermissionStatus() async -> HealthPermissionStatus
     func requestPermission() async -> HealthPermissionStatus
     func fetchTodayActiveCalories() async throws -> Double
+    func fetchActiveCalories(on date: Date) async throws -> Double
     func writeWorkoutCalories(_ kcal: Double, date: Date) async throws
 
     /// Build a 7-day health snapshot to send to the AI Coach backend.

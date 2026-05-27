@@ -6,48 +6,41 @@ struct WorkoutHistoryView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if records.isEmpty {
-                    emptyState
-                } else {
-                    list
-                }
-            }
-            .background(AppConstants.Color.pageBackground)
-            .navigationTitle("Workout History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") { dismiss() }
-                }
-            }
-        }
-    }
+        ZStack(alignment: .top) {
+            PageBackground()
 
-    private var list: some View {
-        ScrollView {
-            VStack(spacing: AppConstants.Spacing.sm) {
-                ForEach(records) { record in
-                    HistoryRow(record: record)
-                }
-            }
-            .padding(AppConstants.Spacing.md)
-        }
-    }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("WORKOUT HISTORY")
+                            .font(FCFont.hero(34))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Button("Close") { dismiss() }
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .padding(.top, 22)
 
-    private var emptyState: some View {
-        VStack(spacing: AppConstants.Spacing.md) {
-            Image(systemName: "tray")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("No workouts yet")
-                .font(.headline)
-            Text("Completed workouts will appear here.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                    if records.isEmpty {
+                        EmptyStateView(
+                            title: "No Workouts Yet",
+                            systemImage: "tray",
+                            description: "Completed workouts will appear here."
+                        )
+                        .padding(.top, 60)
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(records) { record in
+                                HistoryRow(record: record)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, AppConstants.Spacing.md)
+                .padding(.bottom, 48)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -62,37 +55,37 @@ private struct HistoryRow: View {
     }()
 
     var body: some View {
-        HStack(spacing: AppConstants.Spacing.md) {
-            Text(record.intensity.emoji)
-                .font(.title)
-                .frame(width: 44, height: 44)
-                .background(AppConstants.Color.pageBackground)
-                .clipShape(Circle())
+        FCCard(padding: 14) {
+            HStack(spacing: 12) {
+                Text(record.intensity.emoji)
+                    .font(.system(size: 22))
+                    .frame(width: 44, height: 44)
+                    .background(AppConstants.Color.cardSecondary)
+                    .clipShape(Circle())
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(record.title)
-                    .font(.subheadline.bold())
-                    .lineLimit(2)
-                Text(Self.dateFormatter.string(from: record.date))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: AppConstants.Spacing.md) {
-                    Label("\(Int(record.estimatedCalories)) kcal", systemImage: "flame.fill")
-                    Label("\(record.durationMinutes) min", systemImage: "clock")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(record.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppConstants.Color.textOnCard)
+                        .lineLimit(2)
+                    Text(Self.dateFormatter.string(from: record.date))
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppConstants.Color.mutedOnCard)
+                    HStack(spacing: 10) {
+                        Label("\(Int(record.estimatedCalories)) kcal", systemImage: "flame.fill")
+                        Label("\(record.durationMinutes) min", systemImage: "clock")
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
 
-            Spacer()
+                Spacer()
 
-            if record.completed {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                if record.completed {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(AppConstants.Color.accentDark)
+                }
             }
         }
-        .padding(AppConstants.Spacing.md)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.md))
     }
 }

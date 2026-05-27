@@ -1,42 +1,45 @@
 import SwiftUI
 
+// MARK: - Generic stat card (white surface, Bebas number)
+
 struct StatCardView: View {
     let title: String
     let value: String
     let unit: String
     let systemImage: String
+    /// Kept on the signature for backwards compatibility with old call sites;
+    /// the v2 visual treats every stat card's icon as teal accent.
     let tint: Color
 
+    init(title: String, value: String, unit: String, systemImage: String, tint: Color = AppConstants.Color.accent) {
+        self.title = title
+        self.value = value
+        self.unit = unit
+        self.systemImage = systemImage
+        self.tint = tint
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.sm) {
-            HStack {
+        FCCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: systemImage)
-                    .font(.title3)
-                    .foregroundStyle(tint)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.accent)
                     .accessibilityHidden(true)
-                Spacer()
+
+                Text(value)
+                    .font(FCFont.stat(40))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+
+                FCSectionLabel(text: title)
+
+                Text(unit)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
             }
-
-            Text(value)
-                .font(.title.bold())
-                .foregroundStyle(.primary)
-
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(unit)
-                .font(.caption2)
-                .foregroundStyle(tint)
         }
-        .padding(AppConstants.Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg)
-                .stroke(AppConstants.Color.cardStroke, lineWidth: 1)
-        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title): \(value) \(unit)")
     }

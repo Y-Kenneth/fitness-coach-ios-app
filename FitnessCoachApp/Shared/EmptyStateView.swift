@@ -6,19 +6,20 @@ struct EmptyStateView: View {
     let description: String
 
     var body: some View {
-        VStack(spacing: AppConstants.Spacing.md) {
+        VStack(spacing: 14) {
             Image(systemName: systemImage)
                 .font(.system(size: 56))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.35))
                 .accessibilityHidden(true)
 
-            Text(title)
-                .font(.title3.bold())
-                .foregroundStyle(.primary)
+            Text(title.uppercased())
+                .font(FCFont.hero(28))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
 
             Text(description)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.55))
                 .multilineTextAlignment(.center)
         }
         .padding(AppConstants.Spacing.xl)

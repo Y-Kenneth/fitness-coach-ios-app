@@ -2,11 +2,21 @@ import Foundation
 
 final class MockHealthDataProvider: HealthDataProvider {
     var simulatedStatus: HealthPermissionStatus
-    var simulatedCalories: Double
 
-    init(status: HealthPermissionStatus = .authorized, calories: Double = 342) {
+    /// Returns all workout sessions ever logged. Used to compute per-day kcal
+    /// straight from the history, so the calendar value for a date always matches
+    /// the sum of that day's History entries (and survives app restarts).
+    var sessionsProvider: () -> [WorkoutSession] = { [] }
+
+    private let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.calendar = Calendar(identifier: .gregorian)
+        return f
+    }()
+
+    init(status: HealthPermissionStatus = .authorized) {
         self.simulatedStatus = status
-        self.simulatedCalories = calories
     }
 
     func checkPermissionStatus() async -> HealthPermissionStatus {
@@ -19,11 +29,35 @@ final class MockHealthDataProvider: HealthDataProvider {
     }
 
     func fetchTodayActiveCalories() async throws -> Double {
-        simulatedCalories
+        try await fetchActiveCalories(on: Date())
+    }
+
+    func fetchActiveCalories(on date: Date) async throws -> Double {
+        let calendar = Calendar.current
+        let sessions = sessionsProvider()
+        let kcalFromSessions = sessions
+            .filter { calendar.isDate($0.date, inSameDayAs: date) }
+            .reduce(0) { $0 + $1.caloriesBurned }
+
+        if kcalFromSessions > 0 {
+            return Double(kcalFromSessions)
+        }
+        // Today with no sessions starts at 0.
+        if calendar.isDateInToday(date) { return 0 }
+        // Past days with no sessions get a believable baseline.
+        return Self.seededBaseline(for: date)
     }
 
     func writeWorkoutCalories(_ kcal: Double, date: Date) async throws {
-        simulatedCalories += kcal
+        // Sessions are the source of truth — no separate write needed.
+        // (Kept as a no-op so the protocol contract is still satisfied.)
+    }
+
+    private static func seededBaseline(for date: Date) -> Double {
+        // Deterministic pseudo-random baseline per day so past days look plausible.
+        let day = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
+        let base = 250 + (day * 37) % 400
+        return Double(base)
     }
 
     /// Builds a believable 7-day rollup for the AI Coach demo. Values vary by

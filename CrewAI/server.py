@@ -170,7 +170,7 @@ def _wrap_crew_output_as_a2a(crew_output, duration_seconds: float, snapshot: dic
             "run_metadata": {
                 "duration_seconds": round(duration_seconds, 2),
                 "agent_count": len(agent_outputs),
-                "model": "ollama/gemma4:latest",
+                "model": "ollama/llama3.2:3b",
                 "completed_at": now_iso,
                 "data_source": (snapshot or {}).get("data_source", "none"),
             },
@@ -257,7 +257,7 @@ def chat():
     return jsonify({
         "reply": reply_text,
         "duration_seconds": round(duration, 2),
-        "model": "ollama/gemma4:latest",
+        "model": "ollama/llama3.2:3b",
     }), 200
 
 

@@ -2,148 +2,230 @@ import SwiftUI
 
 struct WorkoutDetailView: View {
     @EnvironmentObject private var workoutVM: WorkoutViewModel
+    @Environment(\.dismiss) private var dismiss
     let workout: Workout
-
-    @State private var showingStartConfirm = false
 
     private var difficultyColor: Color {
         switch workout.difficulty {
-        case .beginner: return .green
-        case .intermediate: return .orange
-        case .advanced: return .red
+        case .beginner: return AppConstants.Color.accentDark
+        case .intermediate: return AppConstants.Color.warn
+        case .advanced: return AppConstants.Color.danger
+        }
+    }
+
+    private var heroImageName: String {
+        if workout.name == "Beginner Foundations" { return "hero_beginner" }
+        switch workout.category {
+        case .chest:                return "hero_chest"
+        case .back:                 return "hero_back"
+        case .legs:                 return "hero_legs"
+        case .core:                 return "hero_core"
+        case .fullBody:             return "hero_fullbody"
+        case .cardio:               return "hero_fullbody"
+        case .shoulders, .arms:     return "hero_chest"
         }
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppConstants.Spacing.lg) {
-                HeaderBannerView(workout: workout, difficultyColor: difficultyColor)
+        ZStack(alignment: .bottom) {
+            PageBackground()
 
-                MetaRowView(workout: workout, difficultyColor: difficultyColor)
-                    .padding(.horizontal, AppConstants.Spacing.md)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    // Hero card goes full-width — no horizontal padding
+                    heroCard
+                        .padding(.top, 60) // clear the custom top bar
 
-                Text(workout.description)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, AppConstants.Spacing.md)
-
-                Divider()
-                    .padding(.horizontal, AppConstants.Spacing.md)
-
-                Text("Exercises (\(workout.exercises.count))")
-                    .font(.title3.bold())
-                    .padding(.horizontal, AppConstants.Spacing.md)
-
-                VStack(spacing: 0) {
-                    ForEach(workout.exercises) { exercise in
-                        ExerciseRowView(exercise: exercise)
-                            .padding(.horizontal, AppConstants.Spacing.md)
-                        if exercise.id != workout.exercises.last?.id {
-                            Divider()
-                                .padding(.leading, AppConstants.Spacing.md + 36 + AppConstants.Spacing.md)
-                        }
-                    }
+                    // Everything below gets side padding
+                    metaTiles
+                        .padding(.horizontal, AppConstants.Spacing.md)
+                    exercisesSection
+                        .padding(.horizontal, AppConstants.Spacing.md)
+                    Spacer(minLength: 100)
                 }
-                .background(AppConstants.Color.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
-                .padding(.horizontal, AppConstants.Spacing.md)
-
-                Button(action: startWorkout) {
-                    Label("Start Workout", systemImage: "play.fill")
-                        .font(.headline)
-                        .foregroundStyle(AppConstants.Color.onBrand)
-                        .frame(maxWidth: .infinity)
-                        .padding(AppConstants.Spacing.md)
-                        .background(AppConstants.Color.brand)
-                        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
-                }
-                .padding(.horizontal, AppConstants.Spacing.md)
-                .frame(minHeight: 44)
+                .padding(.bottom, 120)
             }
-            .padding(.bottom, AppConstants.Spacing.xl)
+
+            stickyCTA
         }
-        .background(AppConstants.Color.pageBackground)
-        .navigationTitle(workout.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .overlay(alignment: .top) { customTopBar }
         .sheet(isPresented: $workoutVM.isSessionActive) {
             ActiveSessionView()
                 .environmentObject(workoutVM)
         }
     }
 
-    private func startWorkout() {
-        workoutVM.startSession(for: workout)
-    }
-}
-
-private struct HeaderBannerView: View {
-    let workout: Workout
-    let difficultyColor: Color
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [AppConstants.Color.brand, AppConstants.Color.brandDark],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+    private var customTopBar: some View {
+        let isFav = workoutVM.isFavorite(workout)
+        return HStack {
+            FCTopBarChip(systemImage: "chevron.left", action: { dismiss() }, label: "Back")
+            Spacer()
+            FCTopBarChip(
+                systemImage: isFav ? "heart.fill" : "heart",
+                action: {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
+                        workoutVM.toggleFavorite(workout)
+                    }
+                },
+                label: isFav ? "Remove favorite" : "Add favorite",
+                tint: isFav ? AppConstants.Color.danger : Color.white.opacity(0.85)
             )
+        }
+        .padding(.horizontal, AppConstants.Spacing.md)
+        .padding(.top, 8)
+    }
 
-            Image(systemName: workout.category.systemImage)
-                .font(.system(size: 80))
-                .foregroundStyle(.white.opacity(0.15))
-                .accessibilityHidden(true)
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Hero image — GeometryReader gives us the exact available width
+            // so scaledToFill never overflows the rounded frame.
+            GeometryReader { geo in
+                Image(heroImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: 220)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            }
+            .frame(height: 220)
+            .padding(.horizontal, AppConstants.Spacing.md)
 
-            VStack {
-                Spacer()
-                HStack {
-                    Text(workout.difficulty.rawValue)
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, AppConstants.Spacing.sm)
-                        .padding(.vertical, AppConstants.Spacing.xs)
-                        .background(difficultyColor.opacity(0.85))
-                        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.sm))
-                    Spacer()
+            // Title / description card
+            FCCard(padding: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(workout.difficulty.rawValue.uppercased())
+                            .font(FCFont.label(11))
+                            .tracking(1.0)
+                            .foregroundStyle(difficultyColor)
+                        Text("·")
+                            .foregroundStyle(difficultyColor)
+                        Text(workout.category.rawValue.uppercased())
+                            .font(FCFont.label(11))
+                            .tracking(1.0)
+                            .foregroundStyle(difficultyColor)
+                    }
+                    Text(workout.name.uppercased())
+                        .font(FCFont.hero(40))
+                        .foregroundStyle(AppConstants.Color.textOnCard)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(workout.description)
+                        .font(.system(size: 14))
+                        .foregroundStyle(AppConstants.Color.mutedOnCard)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(AppConstants.Spacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, AppConstants.Spacing.md)
+        }
+    }
+
+    private var metaTiles: some View {
+        HStack(spacing: 10) {
+            MetaTile(value: "\(workout.durationMinutes)", label: "MIN")
+            MetaTile(value: "\(workout.exercises.count)", label: "MOVES")
+            MetaTile(value: "\(workout.totalSets)", label: "SETS")
+        }
+    }
+
+    private var exercisesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            FCSectionLabel(text: "Exercises", color: .white.opacity(0.5))
+                .padding(.top, 4)
+
+            ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
+                IndexedExerciseRow(index: index + 1, exercise: exercise)
             }
         }
-        .frame(height: 180)
-        .accessibilityHidden(true)
     }
-}
 
-private struct MetaRowView: View {
-    let workout: Workout
-    let difficultyColor: Color
+    private var stickyCTA: some View {
+        VStack(spacing: 0) {
+            LinearGradient(
+                colors: [AppConstants.Color.pageBase.opacity(0), AppConstants.Color.pageBase],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 24)
+            .allowsHitTesting(false)
 
-    var body: some View {
-        HStack(spacing: AppConstants.Spacing.xl) {
-            MetaItemView(systemImage: "clock", value: "\(workout.durationMinutes)", label: "min")
-            MetaItemView(systemImage: "list.bullet", value: "\(workout.exercises.count)", label: "exercises")
-            MetaItemView(systemImage: "arrow.up.right", value: "\(workout.totalSets)", label: "total sets")
+            Button(action: { workoutVM.startSession(for: workout) }) {
+                Text("Start Workout")
+            }
+            .buttonStyle(FCPrimaryButtonStyle())
+            .padding(.horizontal, AppConstants.Spacing.md)
+            .padding(.bottom, 16)
+            .background(AppConstants.Color.pageBase)
         }
+        // Push the CTA above the custom tab bar (≈83pt) + safe area
+        .padding(.bottom, 83)
+        .ignoresSafeArea(edges: .bottom)
     }
 }
 
-private struct MetaItemView: View {
-    let systemImage: String
+// MARK: - Components
+
+private struct MetaTile: View {
     let value: String
     let label: String
 
     var body: some View {
-        VStack(spacing: AppConstants.Spacing.xs) {
-            Image(systemName: systemImage)
-                .font(.title3)
-                .foregroundStyle(AppConstants.Color.brandDark)
-                .accessibilityHidden(true)
-            Text(value)
-                .font(.title3.bold())
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        FCCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(value)
+                    .font(FCFont.stat(32))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                Text(label)
+                    .font(FCFont.label(11))
+                    .tracking(1.2)
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+            }
         }
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(value) \(label)")
+    }
+}
+
+private struct IndexedExerciseRow: View {
+    let index: Int
+    let exercise: Exercise
+
+    private var weightText: String {
+        exercise.weightKg > 0 ? "\(Int(exercise.weightKg)) kg" : "Bodyweight"
+    }
+
+    var body: some View {
+        FCCard(padding: 14) {
+            HStack(spacing: 12) {
+                Text(String(format: "%02d", index))
+                    .font(FCFont.stat(22))
+                    .foregroundStyle(AppConstants.Color.muted2)
+                    .frame(width: 32, alignment: .leading)
+
+                Image(systemName: exercise.muscleGroup.systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Color.black.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppConstants.Color.textOnCard)
+                    Text("\(exercise.sets) × \(exercise.reps) · \(weightText)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(AppConstants.Color.mutedOnCard)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+            }
+        }
+        .accessibilityLabel("\(exercise.name): \(exercise.sets) sets of \(exercise.reps) reps, \(weightText)")
     }
 }

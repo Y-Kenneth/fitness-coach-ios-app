@@ -52,6 +52,14 @@ final class LiveHealthDataProvider: HealthDataProvider {
         return try await sumQuantity(type: energyType, unit: .kilocalorie(), from: start, to: .now)
     }
 
+    func fetchActiveCalories(on date: Date) async throws -> Double {
+        guard HKHealthStore.isHealthDataAvailable() else { throw HealthError.unavailable }
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        return try await sumQuantity(type: energyType, unit: .kilocalorie(), from: start, to: end)
+    }
+
     func writeWorkoutCalories(_ kcal: Double, date: Date) async throws {
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthError.unavailable }
         let quantity = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)

@@ -3,7 +3,8 @@ import Foundation
 @MainActor
 final class HealthDashboardViewModel: ObservableObject {
     @Published var permissionStatus: HealthPermissionStatus = .notDetermined
-    @Published var todayCalories: Double?
+    @Published var selectedDate: Date = Calendar.current.startOfDay(for: .now)
+    @Published var selectedDateCalories: Double?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -11,6 +12,12 @@ final class HealthDashboardViewModel: ObservableObject {
 
     init(provider: any HealthDataProvider) {
         self.provider = provider
+    }
+
+    var todayCalories: Double? { selectedDateCalories }
+
+    var isViewingToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
     }
 
     func onAppear() async {
@@ -32,8 +39,13 @@ final class HealthDashboardViewModel: ObservableObject {
         await loadCalories()
     }
 
+    func selectDate(_ date: Date) async {
+        selectedDate = Calendar.current.startOfDay(for: date)
+        await loadCalories()
+    }
+
     func progressFraction(goal: Int) -> Double {
-        guard goal > 0, let cal = todayCalories else { return 0 }
+        guard goal > 0, let cal = selectedDateCalories else { return 0 }
         return min(cal / Double(goal), 1.0)
     }
 
@@ -41,10 +53,10 @@ final class HealthDashboardViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            todayCalories = try await provider.fetchTodayActiveCalories()
+            selectedDateCalories = try await provider.fetchActiveCalories(on: selectedDate)
         } catch {
             errorMessage = "Could not read calorie data. Please try again."
-            todayCalories = nil
+            selectedDateCalories = nil
         }
         isLoading = false
     }

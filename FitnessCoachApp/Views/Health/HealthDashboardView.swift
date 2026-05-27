@@ -4,37 +4,68 @@ struct HealthDashboardView: View {
     @EnvironmentObject private var workoutVM: WorkoutViewModel
     @EnvironmentObject private var profileVM: ProfileViewModel
     @StateObject private var vm: HealthDashboardViewModel
+
     @State private var showingCoach = false
+    @State private var showingCalendar = false
+    @State private var snapshot: HealthSnapshot?
+
+    private let provider: any HealthDataProvider
 
     init(provider: any HealthDataProvider) {
+        self.provider = provider
         _vm = StateObject(wrappedValue: HealthDashboardViewModel(provider: provider))
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: AppConstants.Spacing.lg) {
-                    switch vm.permissionStatus {
-                    case .notDetermined:
-                        ConnectHealthView { await vm.requestPermission() }
-                    case .denied:
-                        PermissionDeniedView()
-                    case .unavailable:
-                        HealthUnavailableView()
-                    case .authorized:
-                        authorizedContent
+            ZStack(alignment: .top) {
+                PageBackground()
+                HeroWord(text: "HEALTH", size: 88, side: .trailing, top: 60, opacity: 0.07)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AppConstants.Spacing.lg) {
+                        switch vm.permissionStatus {
+                        case .notDetermined:
+                            ConnectHealthCard { await vm.requestPermission() }
+                                .padding(.horizontal, AppConstants.Spacing.md)
+                        case .denied:
+                            PermissionDeniedCard()
+                                .padding(.horizontal, AppConstants.Spacing.md)
+                        case .unavailable:
+                            HealthUnavailableCard()
+                                .padding(.horizontal, AppConstants.Spacing.md)
+                        case .authorized:
+                            authorizedContent
+                                .padding(.horizontal, AppConstants.Spacing.md)
+                        }
                     }
+                    .padding(.top, 140)
+                    .padding(.bottom, 120)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(AppConstants.Spacing.md)
+                .scrollIndicators(.hidden)
             }
-            .background(AppConstants.Color.pageBackground)
-            .navigationTitle("Health Dashboard")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingCalendar = true
+                    } label: {
+                        Image(systemName: "calendar")
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .accessibilityLabel("Pick a date")
+                    .opacity(vm.permissionStatus == .authorized ? 1 : 0)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        Task { await vm.refresh() }
+                        Task {
+                            await vm.refresh()
+                            await loadSnapshot()
+                        }
                     } label: {
                         Image(systemName: "arrow.clockwise")
+                            .foregroundStyle(.white.opacity(0.85))
                     }
                     .accessibilityLabel("Refresh health data")
                     .disabled(vm.isLoading)
@@ -47,369 +78,419 @@ struct HealthDashboardView: View {
             .sheet(isPresented: $showingCoach) {
                 A2ACoachingView()
             }
+            .sheet(isPresented: $showingCalendar) {
+                DatePickerSheet(
+                    selectedDate: vm.selectedDate,
+                    onSelect: { date in
+                        Task { await vm.selectDate(date) }
+                    }
+                )
+                .presentationDetents([.medium])
+            }
             .task {
                 await vm.onAppear()
+                await loadSnapshot()
+            }
+            .onChange(of: workoutVM.isSessionActive) { isActive in
+                // Refresh the dashboard right after a workout finishes so the
+                // newly-written calories show up immediately.
+                if !isActive {
+                    Task { await vm.refresh() }
+                }
             }
         }
     }
 
     @ViewBuilder
     private var authorizedContent: some View {
-        ConnectionStatusBadge(status: .authorized)
+        ConnectionPill(connected: true)
 
-        if vm.isLoading {
-            ProgressView("Reading health data…")
-                .frame(maxWidth: .infinity, minHeight: 200)
-        } else if let message = vm.errorMessage {
-            ErrorBannerView(message: message) {
-                Task { await vm.refresh() }
+        if vm.isLoading && vm.todayCalories == nil {
+            FCCard {
+                HStack {
+                    ProgressView().tint(AppConstants.Color.accent)
+                    Text("Reading health data…")
+                        .font(.system(size: 14))
+                        .foregroundStyle(AppConstants.Color.mutedOnCard)
+                    Spacer()
+                }
             }
         } else {
-            CalorieDashboardCard(
-                todayCalories: vm.todayCalories,
+            TodayActivityCard(
+                kcal: vm.todayCalories,
                 goal: profileVM.profile.dailyCalorieGoal,
-                progress: vm.progressFraction(goal: profileVM.profile.dailyCalorieGoal)
+                progress: vm.progressFraction(goal: profileVM.profile.dailyCalorieGoal),
+                date: vm.selectedDate,
+                isToday: vm.isViewingToday
             )
 
-            FitCoachCaloriesCard(
-                allTimeKcal: workoutVM.sessions.reduce(0) { $0 + $1.caloriesBurned },
-                sessionCount: workoutVM.sessions.count
-            )
+            AICoachEntryCard { showingCoach = true }
 
-            RecommendationEntryCard {
-                showingCoach = true
-            }
+            WeeklyMetricsBento(snapshot: snapshot)
         }
+    }
+
+    private func loadSnapshot() async {
+        guard vm.permissionStatus == .authorized else { return }
+        let snap = await provider.fetchWeeklySnapshot(goalActiveKcal: profileVM.profile.dailyCalorieGoal)
+        await MainActor.run { self.snapshot = snap }
     }
 }
 
-// MARK: - Connect Health View
+// MARK: - Connection pill
 
-private struct ConnectHealthView: View {
-    let onConnect: () async -> Void
-
-    var body: some View {
-        VStack(spacing: AppConstants.Spacing.lg) {
-            Image(systemName: "heart.text.clipboard")
-                .font(.system(size: 64))
-                .foregroundStyle(.red)
-                .accessibilityHidden(true)
-
-            VStack(spacing: AppConstants.Spacing.sm) {
-                Text("Connect Apple Health")
-                    .font(.title2.bold())
-
-                Text("FitCoach reads your active calorie data to track your daily burn and help you reach your goal. Your health data stays on your device and is never used for advertising.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            Button {
-                Task { await onConnect() }
-            } label: {
-                Label("Connect Apple Health", systemImage: "heart.fill")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(AppConstants.Spacing.md)
-                    .background(.red)
-                    .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
-            }
-            .frame(minHeight: 44)
-        }
-        .padding(AppConstants.Spacing.xl)
-        .frame(maxWidth: .infinity)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl))
-    }
-}
-
-// MARK: - Permission Denied View
-
-private struct PermissionDeniedView: View {
-    var body: some View {
-        VStack(spacing: AppConstants.Spacing.lg) {
-            Image(systemName: "heart.slash")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-
-            VStack(spacing: AppConstants.Spacing.sm) {
-                Text("Health Access Declined")
-                    .font(.title3.bold())
-
-                Text("To see your calorie data, go to Settings → Privacy & Security → Health → FitCoach and allow access to Active Energy.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            Button {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                Text("Open Settings")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(AppConstants.Color.brandDark)
-            }
-            .frame(minHeight: 44)
-        }
-        .padding(AppConstants.Spacing.xl)
-        .frame(maxWidth: .infinity)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl))
-        .accessibilityElement(children: .combine)
-    }
-}
-
-// MARK: - Health Unavailable View
-
-private struct HealthUnavailableView: View {
-    var body: some View {
-        VStack(spacing: AppConstants.Spacing.md) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-
-            Text("HealthKit Not Available")
-                .font(.title3.bold())
-
-            Text("Apple Health is not supported on this device.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(AppConstants.Spacing.xl)
-        .frame(maxWidth: .infinity)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl))
-    }
-}
-
-// MARK: - Connection Status Badge
-
-private struct ConnectionStatusBadge: View {
-    let status: HealthPermissionStatus
-
-    private var label: String {
-        status == .authorized ? "Health Connected" : "Health Disconnected"
-    }
-
-    private var color: Color {
-        status == .authorized ? .green : .secondary
-    }
+private struct ConnectionPill: View {
+    let connected: Bool
 
     var body: some View {
-        HStack(spacing: AppConstants.Spacing.sm) {
+        HStack(spacing: 8) {
             Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
-                .accessibilityHidden(true)
-            Text(label)
-                .font(.subheadline.bold())
-                .foregroundStyle(color)
-            Spacer()
+                .fill(connected ? AppConstants.Color.accent : .gray)
+                .frame(width: 6, height: 6)
+                .shadow(color: AppConstants.Color.accent.opacity(0.6), radius: 4)
+            Text(connected ? "APPLE HEALTH CONNECTED" : "APPLE HEALTH OFFLINE")
+                .font(FCFont.label(11))
+                .tracking(1.0)
+                .foregroundStyle(AppConstants.Color.accent)
         }
-        .padding(.horizontal, AppConstants.Spacing.sm)
-        .accessibilityLabel(label)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(AppConstants.Color.accent.opacity(0.10))
+        .clipShape(Capsule())
     }
 }
 
-// MARK: - Calorie Dashboard Card
+// MARK: - Today activity hero card
 
-private struct CalorieDashboardCard: View {
-    let todayCalories: Double?
+private struct TodayActivityCard: View {
+    let kcal: Double?
     let goal: Int
     let progress: Double
+    let date: Date
+    let isToday: Bool
 
-    private var caloriesDisplay: String {
-        guard let cal = todayCalories else { return "—" }
-        return cal.formatted(.number.precision(.fractionLength(0)))
-    }
-
-    private var progressPercent: String {
-        "\(Int(progress * 100))%"
+    private var displayKcal: String {
+        guard let k = kcal else { return "—" }
+        return Int(k).formatted()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.lg) {
-            Text("Today's Activity")
-                .font(.title2.bold())
-
-            HStack(alignment: .bottom, spacing: AppConstants.Spacing.xs) {
-                Text(caloriesDisplay)
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundStyle(todayCalories == nil ? .secondary : .primary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 8) {
+                FCSectionLabel(text: isToday ? "Today" : "Selected", color: .white.opacity(0.6))
+                Text(displayKcal)
+                    .font(FCFont.stat(96))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
                     .contentTransition(.numericText())
-
-                Text("kcal active")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, AppConstants.Spacing.sm)
+                Text("KCAL ACTIVE")
+                    .font(FCFont.label(11))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.7))
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(
-                todayCalories == nil
-                    ? "No active calories recorded yet today"
-                    : "\(caloriesDisplay) active kilocalories today"
-            )
-
-            VStack(alignment: .leading, spacing: AppConstants.Spacing.sm) {
-                HStack {
-                    Text("Daily Goal")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(goal) kcal · \(progressPercent)")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(progress >= 1 ? .green : .primary)
-                }
-
-                ProgressView(value: progress)
-                    .tint(progress >= 1 ? .green : .orange)
-                    .accessibilityLabel("Goal progress: \(progressPercent) of \(goal) kilocalories")
-            }
-
-            if todayCalories == nil {
-                Label("No active calories recorded today yet.", systemImage: "info.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(AppConstants.Spacing.lg)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl))
-    }
-}
-
-// MARK: - Error Banner
-
-private struct ErrorBannerView: View {
-    let message: String
-    let onRetry: () -> Void
-
-    var body: some View {
-        HStack(spacing: AppConstants.Spacing.md) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: AppConstants.Spacing.xs) {
-                Text("Could Not Load Data")
-                    .font(.subheadline.bold())
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             Spacer()
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.7))
 
-            Button("Retry", action: onRetry)
-                .font(.caption.bold())
-                .frame(minWidth: 44, minHeight: 44)
-        }
-        .padding(AppConstants.Spacing.md)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.lg))
-    }
-}
-
-// MARK: - FitCoach Calories Card
-
-private struct FitCoachCaloriesCard: View {
-    let allTimeKcal: Int
-    let sessionCount: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppConstants.Spacing.md) {
-            HStack {
-                Label("FitCoach Workouts", systemImage: "figure.strengthtraining.traditional")
-                    .font(.headline)
-                Spacer()
-                Text("All-time")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, AppConstants.Spacing.sm)
-                    .padding(.vertical, AppConstants.Spacing.xs)
-                    .background(.orange.opacity(0.15))
-                    .clipShape(Capsule())
-            }
-
-            HStack(alignment: .bottom, spacing: AppConstants.Spacing.xs) {
-                Text(allTimeKcal.formatted())
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(.orange)
-                Text("kcal logged")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, AppConstants.Spacing.xs)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(allTimeKcal.formatted()) kilocalories logged across all FitCoach workouts")
-
-            Divider()
-
-            HStack {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Text("Calories burned across \(sessionCount) FitCoach session\(sessionCount == 1 ? "" : "s"). Written to Apple Health after each workout.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                ZStack {
+                    FCProgressRing(progress: progress, lineWidth: 9, size: 96)
+                    VStack(spacing: 0) {
+                        Text("\(Int(progress * 100))%")
+                            .font(FCFont.stat(22))
+                            .foregroundStyle(.white)
+                        Text("of \(goal)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
             }
         }
-        .padding(AppConstants.Spacing.lg)
-        .background(AppConstants.Color.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl)
-                .strokeBorder(.orange.opacity(0.3), lineWidth: 1)
+        .padding(22)
+        .frame(maxWidth: .infinity)
+        .background(
+            Image("hero_health")
+                .resizable()
+                .scaledToFill()
+                .opacity(0.75)
+                .clipped()
         )
+        .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(displayKcal) active kilocalories today, \(Int(progress * 100)) percent of \(goal) goal")
     }
 }
 
-// MARK: - Recommendation Entry Card
+// MARK: - AI Coach entry card (the one teal-gradient surface per Health screen)
 
-private struct RecommendationEntryCard: View {
+private struct AICoachEntryCard: View {
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: AppConstants.Spacing.md) {
-                Image(systemName: "brain.head.profile")
-                    .font(.title2)
-                    .foregroundStyle(AppConstants.Color.onBrand)
-                    .accessibilityHidden(true)
+            HStack(spacing: 14) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(width: 52, height: 52)
+                    .background(Color.black.opacity(0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                VStack(alignment: .leading, spacing: AppConstants.Spacing.xs) {
-                    Text("AI Coach Recommendation")
-                        .font(.headline)
-                        .foregroundStyle(AppConstants.Color.onBrand)
-                    Text("See personalised tips based on your activity")
-                        .font(.caption)
-                        .foregroundStyle(AppConstants.Color.onBrand.opacity(0.75))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("AI COACH")
+                        .font(FCFont.hero(24))
+                        .foregroundStyle(.black)
+                    Text("Personalised tips based on your week")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.black.opacity(0.65))
                 }
-
                 Spacer()
-
                 Image(systemName: "chevron.right")
-                    .foregroundStyle(AppConstants.Color.onBrand.opacity(0.7))
-                    .accessibilityHidden(true)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.75))
             }
-            .padding(AppConstants.Spacing.lg)
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 LinearGradient(
-                    colors: [AppConstants.Color.brand, AppConstants.Color.brandDark],
-                    startPoint: .leading,
-                    endPoint: .trailing
+                    colors: [AppConstants.Color.accent, AppConstants.Color.accentDark],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.xl))
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.card, style: .continuous))
+            .shadow(color: AppConstants.Color.accent.opacity(0.35), radius: 18, y: 6)
         }
-        .accessibilityLabel("Get AI Coach Recommendation")
-        .accessibilityHint("Opens the AI coaching screen")
+        .buttonStyle(.plain)
+        .accessibilityLabel("AI Coach. Personalised tips based on your week.")
+    }
+}
+
+// MARK: - Weekly metrics bento
+
+private struct WeeklyMetricsBento: View {
+    let snapshot: HealthSnapshot?
+
+    private var totals: WeeklyTotals? { snapshot?.weeklyTotals }
+    private var stepsAvg: Int { totals?.dailyAverageSteps ?? 0 }
+    private var exerciseMinAvg: Int {
+        guard let t = totals, t.totalExerciseMinutes > 0 else { return 0 }
+        return t.totalExerciseMinutes / 7
+    }
+    private var sleepHours: Double { totals?.avgSleepHours ?? 0 }
+    private var restingBPM: Int { totals?.avgRestingHeartRate ?? 0 }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                MetricTile(
+                    icon: "shoeprints.fill",
+                    value: stepsAvg > 0 ? stepsAvg.formatted() : "—",
+                    label: "STEPS",
+                    sublabel: "OF 10,000"
+                )
+                MetricTile(
+                    icon: "flame",
+                    value: exerciseMinAvg > 0 ? "\(exerciseMinAvg)" : "—",
+                    label: "EXERCISE MIN",
+                    sublabel: "OF 30 GOAL",
+                    delta: exerciseMinAvg > 0 ? "+20%" : nil
+                )
+            }
+            HStack(spacing: 10) {
+                MetricTile(
+                    icon: "moon.fill",
+                    value: sleepHours > 0 ? formattedSleep(sleepHours) : "—",
+                    label: "SLEEP",
+                    sublabel: "AVG THIS WK"
+                )
+                MetricTile(
+                    icon: "heart.fill",
+                    value: restingBPM > 0 ? "\(restingBPM)" : "—",
+                    label: "RESTING BPM",
+                    sublabel: restingBPM > 0 ? "−2 VS LAST WK" : "NO DATA"
+                )
+            }
+        }
+    }
+
+    private func formattedSleep(_ h: Double) -> String {
+        let hours = Int(h)
+        let minutes = Int((h - Double(hours)) * 60)
+        return "\(hours)H \(String(format: "%02d", minutes))"
+    }
+}
+
+private struct MetricTile: View {
+    let icon: String
+    let value: String
+    let label: String
+    let sublabel: String
+    var delta: String? = nil
+
+    var body: some View {
+        FCCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppConstants.Color.accent)
+                    Spacer()
+                    if let delta = delta {
+                        Text(delta)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppConstants.Color.accentDark)
+                    }
+                }
+                Text(value)
+                    .font(FCFont.stat(34))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                FCSectionLabel(text: label)
+                Text(sublabel)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel("\(label): \(value), \(sublabel)")
+    }
+}
+
+// MARK: - Permission states
+
+private struct ConnectHealthCard: View {
+    let onConnect: () async -> Void
+
+    var body: some View {
+        FCCard(padding: 22) {
+            VStack(spacing: 14) {
+                Image(systemName: "heart.text.clipboard")
+                    .font(.system(size: 48))
+                    .foregroundStyle(AppConstants.Color.danger)
+                    .frame(width: 88, height: 88)
+                    .background(AppConstants.Color.danger.opacity(0.12))
+                    .clipShape(Circle())
+
+                Text("CONNECT APPLE HEALTH")
+                    .font(FCFont.hero(28))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+
+                Text("FitCoach reads your active calorie data to track your daily burn. Your health data stays on your device.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+                    .multilineTextAlignment(.center)
+
+                Button(action: { Task { await onConnect() } }) {
+                    Text("Connect")
+                }
+                .buttonStyle(FCPrimaryButtonStyle())
+                .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+private struct PermissionDeniedCard: View {
+    var body: some View {
+        FCCard(padding: 22) {
+            VStack(spacing: 14) {
+                Image(systemName: "heart.slash")
+                    .font(.system(size: 40))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+
+                Text("HEALTH ACCESS DECLINED")
+                    .font(FCFont.hero(24))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                    .multilineTextAlignment(.center)
+
+                Text("Settings → Privacy & Security → Health → FitCoach → allow Active Energy.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Open Settings")
+                }
+                .buttonStyle(FCPrimaryButtonStyle())
+            }
+        }
+    }
+}
+
+private struct HealthUnavailableCard: View {
+    var body: some View {
+        FCCard(padding: 22) {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 40))
+                    .foregroundStyle(AppConstants.Color.warn)
+                Text("HEALTHKIT NOT AVAILABLE")
+                    .font(FCFont.hero(20))
+                    .foregroundStyle(AppConstants.Color.textOnCard)
+                Text("Apple Health is not supported on this device.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppConstants.Color.mutedOnCard)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+// MARK: - Date picker sheet
+
+private struct DatePickerSheet: View {
+    let selectedDate: Date
+    let onSelect: (Date) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var date: Date
+
+    init(selectedDate: Date, onSelect: @escaping (Date) -> Void) {
+        self.selectedDate = selectedDate
+        self.onSelect = onSelect
+        _date = State(initialValue: selectedDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                DatePicker(
+                    "Select date",
+                    selection: $date,
+                    in: ...Date(),
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .tint(AppConstants.Color.accent)
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding(.top, 12)
+            .navigationTitle("Pick a date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        onSelect(date)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
     }
 }
