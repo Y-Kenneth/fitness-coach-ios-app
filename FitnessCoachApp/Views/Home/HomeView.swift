@@ -94,18 +94,8 @@ struct HomeView: View {
 
     private var quickStartSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                FCSectionLabel(text: "Quick Start", color: .white.opacity(0.5))
-                Spacer()
-                HStack(spacing: 4) {
-                    Text("See all")
-                        .font(.system(size: 12, weight: .semibold))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .foregroundStyle(.white.opacity(0.55))
-            }
-            .padding(.horizontal, AppConstants.Spacing.md)
+            FCSectionLabel(text: "Quick Start", color: .white.opacity(0.5))
+                .padding(.horizontal, AppConstants.Spacing.md)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -133,12 +123,9 @@ struct HomeView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Text("FORM CHECK")
-                                .font(FCFont.hero(26))
-                                .foregroundStyle(AppConstants.Color.textOnCard)
-                            BetaPill()
-                        }
+                        Text("FORM CHECK")
+                            .font(FCFont.hero(26))
+                            .foregroundStyle(AppConstants.Color.textOnCard)
                         Text("Real-time pose analysis")
                             .font(.system(size: 13))
                             .foregroundStyle(AppConstants.Color.mutedOnCard)
@@ -153,7 +140,7 @@ struct HomeView: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Form Check, beta")
+        .accessibilityLabel("Form Check")
         .accessibilityHint("Opens a camera view that analyzes your exercise form")
     }
 }

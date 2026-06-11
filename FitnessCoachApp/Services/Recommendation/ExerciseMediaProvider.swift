@@ -13,6 +13,7 @@ struct ExerciseDBMediaProvider: ExerciseMediaProviding {
     let session: URLSession
 
     init(apiKey: String = Secrets.rapidAPIKey, session: URLSession = .shared) {
+        
         self.apiKey = apiKey
         self.session = session
     }

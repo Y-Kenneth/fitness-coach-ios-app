@@ -30,3 +30,14 @@ __pycache__/
 
 # Logs
 *.log
+
+# Firebase credentials
+FitnessCoachApp/GoogleService-Info.plist
+
+# Local docs (keep screenshots but exclude everything else)
+docs/APP_OVERVIEW.md
+docs/DESIGN_BRIEF.md
+docs/security/
+
+# Large ML model binaries (CrewAI)
+CrewAI/SquatFormClassifier.mlmodel

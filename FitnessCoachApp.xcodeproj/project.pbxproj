@@ -28,13 +28,23 @@
 		CB2D979C2FC42B5B009F117C /* WorkoutRecommendationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2D97992FC42B5B009F117C /* WorkoutRecommendationView.swift */; };
 		CB2D979E2FC42BB4009F117C /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2D979D2FC42BB4009F117C /* Secrets.swift */; };
 		CB2D97A02FC42C0C009F117C /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = CB2D979F2FC42C0C009F117C /* Secrets.plist */; };
+		CB356CFD2FD92DBE007E0A44 /* SquatFormClassifier.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = CB356CFC2FD92DBE007E0A44 /* SquatFormClassifier.mlmodel */; };
 		CB4D16F12FC45973003ACB25 /* WorkoutHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4D16F02FC45973003ACB25 /* WorkoutHistoryStore.swift */; };
 		CB4D16F32FC464F3003ACB25 /* AnimatedGIFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4D16F22FC464F3003ACB25 /* AnimatedGIFView.swift */; };
-		CBA1B2C12FC50000003ACB25 /* ProfileToolbarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA1B2C02FC50000003ACB25 /* ProfileToolbarButton.swift */; };
 		CB4D16F52FC4650A003ACB25 /* ExerciseMediaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4D16F42FC4650A003ACB25 /* ExerciseMediaProvider.swift */; };
+		CB5355B52FDA6E4D00A990A8 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CB5355B42FDA6E4D00A990A8 /* GoogleService-Info.plist */; };
 		CB541FD92FAC2C1F002236D6 /* FitnessCoachAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB541FD82FAC2C1F002236D6 /* FitnessCoachAppApp.swift */; };
 		CB541FDB2FAC2C1F002236D6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB541FDA2FAC2C1F002236D6 /* ContentView.swift */; };
 		CB541FDD2FAC2C25002236D6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CB541FDC2FAC2C25002236D6 /* Assets.xcassets */; };
+		CB58B7802FD10DC800D8F422 /* LungeFormAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB58B77B2FD10DC800D8F422 /* LungeFormAnalyzer.swift */; };
+		CB58B7812FD10DC800D8F422 /* PushUpFormAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB58B77C2FD10DC800D8F422 /* PushUpFormAnalyzer.swift */; };
+		CB58B7822FD10DC800D8F422 /* SquatMLClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB58B77D2FD10DC800D8F422 /* SquatMLClassifier.swift */; };
+		CB58B7832FD10DC800D8F422 /* ExerciseDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB58B77E2FD10DC800D8F422 /* ExerciseDetector.swift */; };
+		CB58B7842FD10DC800D8F422 /* ExerciseAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB58B77F2FD10DC800D8F422 /* ExerciseAnalysisEngine.swift */; };
+		CB58B7862FD10DE900D8F422 /* train_squat_classifier.py in Resources */ = {isa = PBXBuildFile; fileRef = CB58B7852FD10DE900D8F422 /* train_squat_classifier.py */; };
+		CB7A000200000000FFFF0001 /* SquatFormAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB7A000100000000FFFF0001 /* SquatFormAnalyzer.swift */; };
+		CB7A000500000000FFFF0001 /* ImagePoseTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB7A000400000000FFFF0001 /* ImagePoseTestView.swift */; };
+		CBA1B2C12FC50000003ACB25 /* ProfileToolbarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA1B2C02FC50000003ACB25 /* ProfileToolbarButton.swift */; };
 		CBC1195A2FBAE56A00508462 /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC119562FBAE56900508462 /* WorkoutSession.swift */; };
 		CBC1195B2FBAE56A00508462 /* Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC119572FBAE56900508462 /* Workout.swift */; };
 		CBC1195C2FBAE56A00508462 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC119582FBAE56900508462 /* UserProfile.swift */; };
@@ -61,6 +71,14 @@
 		CBC119932FBAE59500508462 /* PoseDetectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC119802FBAE59500508462 /* PoseDetectionViewModel.swift */; };
 		CBC119942FBAE59500508462 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC119812FBAE59500508462 /* ProfileViewModel.swift */; };
 		CBC119952FBAE59500508462 /* WorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC119822FBAE59500508462 /* WorkoutViewModel.swift */; };
+		CBF92C042FC70BB100B7809E /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = CBF92C032FC70BB100B7809E /* FirebaseAuth */; };
+		CBF92C062FC70BB100B7809E /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = CBF92C052FC70BB100B7809E /* FirebaseFirestore */; };
+		CBF92C082FC70BB100B7809E /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = CBF92C072FC70BB100B7809E /* FirebaseStorage */; };
+		CBF92C112FC710C600B7809E /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF92C0E2FC710C600B7809E /* LoginView.swift */; };
+		CBF92C122FC710C600B7809E /* AuthComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF92C0F2FC710C600B7809E /* AuthComponents.swift */; };
+		CBF92C132FC710C600B7809E /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF92C102FC710C600B7809E /* RegisterView.swift */; };
+		CBF92C152FC710E100B7809E /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF92C142FC710DF00B7809E /* AuthService.swift */; };
+		CBF92C162FC710E100B7809E /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF92C172FC710E100B7809E /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -85,14 +103,24 @@
 		CB2D97992FC42B5B009F117C /* WorkoutRecommendationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WorkoutRecommendationView.swift; sourceTree = "<group>"; };
 		CB2D979D2FC42BB4009F117C /* Secrets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB2D979F2FC42C0C009F117C /* Secrets.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		CB356CFC2FD92DBE007E0A44 /* SquatFormClassifier.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = SquatFormClassifier.mlmodel; sourceTree = "<group>"; };
 		CB4D16F02FC45973003ACB25 /* WorkoutHistoryStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryStore.swift; sourceTree = "<group>"; };
 		CB4D16F22FC464F3003ACB25 /* AnimatedGIFView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimatedGIFView.swift; sourceTree = "<group>"; };
-		CBA1B2C02FC50000003ACB25 /* ProfileToolbarButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileToolbarButton.swift; sourceTree = "<group>"; };
 		CB4D16F42FC4650A003ACB25 /* ExerciseMediaProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExerciseMediaProvider.swift; sourceTree = "<group>"; };
+		CB5355B42FDA6E4D00A990A8 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		CB541FD52FAC2C1F002236D6 /* FitnessCoachApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitnessCoachApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB541FD82FAC2C1F002236D6 /* FitnessCoachAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessCoachAppApp.swift; sourceTree = "<group>"; };
 		CB541FDA2FAC2C1F002236D6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CB541FDC2FAC2C25002236D6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CB58B77B2FD10DC800D8F422 /* LungeFormAnalyzer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LungeFormAnalyzer.swift; sourceTree = "<group>"; };
+		CB58B77C2FD10DC800D8F422 /* PushUpFormAnalyzer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PushUpFormAnalyzer.swift; sourceTree = "<group>"; };
+		CB58B77D2FD10DC800D8F422 /* SquatMLClassifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SquatMLClassifier.swift; sourceTree = "<group>"; };
+		CB58B77E2FD10DC800D8F422 /* ExerciseDetector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExerciseDetector.swift; sourceTree = "<group>"; };
+		CB58B77F2FD10DC800D8F422 /* ExerciseAnalysisEngine.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExerciseAnalysisEngine.swift; sourceTree = "<group>"; };
+		CB58B7852FD10DE900D8F422 /* train_squat_classifier.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = train_squat_classifier.py; sourceTree = "<group>"; };
+		CB7A000100000000FFFF0001 /* SquatFormAnalyzer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SquatFormAnalyzer.swift; sourceTree = "<group>"; };
+		CB7A000400000000FFFF0001 /* ImagePoseTestView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImagePoseTestView.swift; sourceTree = "<group>"; };
+		CBA1B2C02FC50000003ACB25 /* ProfileToolbarButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileToolbarButton.swift; sourceTree = "<group>"; };
 		CBC119562FBAE56900508462 /* WorkoutSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WorkoutSession.swift; sourceTree = "<group>"; };
 		CBC119572FBAE56900508462 /* Workout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Workout.swift; sourceTree = "<group>"; };
 		CBC119582FBAE56900508462 /* UserProfile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
@@ -127,6 +155,11 @@
 		CBE825AC2FBAE4C10043D103 /* agents.cpython-311.pyc */ = {isa = PBXFileReference; lastKnownFileType = file; path = "agents.cpython-311.pyc"; sourceTree = "<group>"; };
 		CBE825AD2FBAE4C10043D103 /* agents.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = agents.py; sourceTree = "<group>"; };
 		CBE825AE2FBAE4C10043D103 /* README_SERVER.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README_SERVER.md; sourceTree = "<group>"; };
+		CBF92C0E2FC710C600B7809E /* LoginView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		CBF92C0F2FC710C600B7809E /* AuthComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthComponents.swift; sourceTree = "<group>"; };
+		CBF92C102FC710C600B7809E /* RegisterView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		CBF92C142FC710DF00B7809E /* AuthService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		CBF92C172FC710E100B7809E /* OnboardingView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,6 +167,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CBF92C042FC70BB100B7809E /* FirebaseAuth in Frameworks */,
+				CBF92C062FC70BB100B7809E /* FirebaseFirestore in Frameworks */,
+				CBF92C082FC70BB100B7809E /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,6 +246,7 @@
 		CB541FD72FAC2C1F002236D6 /* FitnessCoachApp */ = {
 			isa = PBXGroup;
 			children = (
+				CB5355B42FDA6E4D00A990A8 /* GoogleService-Info.plist */,
 				CB2D979F2FC42C0C009F117C /* Secrets.plist */,
 				CBC119972FBAE5BE00508462 /* FitnessCoachApp.entitlements */,
 				CBC119962FBAE5BE00508462 /* Info.plist */,
@@ -224,6 +261,20 @@
 				CB541FDC2FAC2C25002236D6 /* Assets.xcassets */,
 			);
 			path = FitnessCoachApp;
+			sourceTree = "<group>";
+		};
+		CB7A000300000000FFFF0001 /* Vision */ = {
+			isa = PBXGroup;
+			children = (
+				CB356CFC2FD92DBE007E0A44 /* SquatFormClassifier.mlmodel */,
+				CB58B77F2FD10DC800D8F422 /* ExerciseAnalysisEngine.swift */,
+				CB58B77E2FD10DC800D8F422 /* ExerciseDetector.swift */,
+				CB58B77B2FD10DC800D8F422 /* LungeFormAnalyzer.swift */,
+				CB58B77C2FD10DC800D8F422 /* PushUpFormAnalyzer.swift */,
+				CB58B77D2FD10DC800D8F422 /* SquatMLClassifier.swift */,
+				CB7A000100000000FFFF0001 /* SquatFormAnalyzer.swift */,
+			);
+			path = Vision;
 			sourceTree = "<group>";
 		};
 		CBC119552FBAE56900508462 /* Models */ = {
@@ -241,7 +292,9 @@
 		CBC1195E2FBAE58300508462 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				CBF92C142FC710DF00B7809E /* AuthService.swift */,
 				CB2D97852FC42B3D009F117C /* Recommendation */,
+				CB7A000300000000FFFF0001 /* Vision */,
 				CB1430B72FBB2CA10028DC5A /* HealthSnapshot.swift */,
 				CBC1195F2FBAE58300508462 /* HealthDataProvider.swift */,
 				CBC119602FBAE58300508462 /* LiveHealthDataProvider.swift */,
@@ -261,6 +314,7 @@
 		CBC119672FBAE59500508462 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CBF92C0D2FC710C600B7809E /* Auth */,
 				CB2D97962FC42B5B009F117C /* Workout */,
 				CBC119682FBAE59500508462 /* Home */,
 				CBC1196B2FBAE59500508462 /* PoseDetection */,
@@ -286,6 +340,7 @@
 			isa = PBXGroup;
 			children = (
 				CBC1196C2FBAE59500508462 /* PoseDetectionView.swift */,
+				CB7A000400000000FFFF0001 /* ImagePoseTestView.swift */,
 			);
 			path = PoseDetection;
 			sourceTree = "<group>";
@@ -369,6 +424,7 @@
 		CBE825A92FBAE4C10043D103 /* CrewAI */ = {
 			isa = PBXGroup;
 			children = (
+				CB58B7852FD10DE900D8F422 /* train_squat_classifier.py */,
 				CBE825AA2FBAE4C10043D103 /* server.py */,
 				CBE825AB2FBAE4C10043D103 /* __pycache__ */,
 				CBE825AD2FBAE4C10043D103 /* agents.py */,
@@ -383,6 +439,17 @@
 				CBE825AC2FBAE4C10043D103 /* agents.cpython-311.pyc */,
 			);
 			path = __pycache__;
+			sourceTree = "<group>";
+		};
+		CBF92C0D2FC710C600B7809E /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				CBF92C0E2FC710C600B7809E /* LoginView.swift */,
+				CBF92C0F2FC710C600B7809E /* AuthComponents.swift */,
+				CBF92C102FC710C600B7809E /* RegisterView.swift */,
+				CBF92C172FC710E100B7809E /* OnboardingView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -401,6 +468,11 @@
 			dependencies = (
 			);
 			name = FitnessCoachApp;
+			packageProductDependencies = (
+				CBF92C032FC70BB100B7809E /* FirebaseAuth */,
+				CBF92C052FC70BB100B7809E /* FirebaseFirestore */,
+				CBF92C072FC70BB100B7809E /* FirebaseStorage */,
+			);
 			productName = FitnessCoachApp;
 			productReference = CB541FD52FAC2C1F002236D6 /* FitnessCoachApp.app */;
 			productType = "com.apple.product-type.application";
@@ -429,6 +501,9 @@
 				Base,
 			);
 			mainGroup = CB541FCC2FAC2C1F002236D6;
+			packageReferences = (
+				CBF92C022FC70BB100B7809E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = CB541FD62FAC2C1F002236D6 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -443,10 +518,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB58B7862FD10DE900D8F422 /* train_squat_classifier.py in Resources */,
 				CBC119832FBAE59500508462 /* Preview Assets.xcassets in Resources */,
 				CB2D97A02FC42C0C009F117C /* Secrets.plist in Resources */,
 				CB1430BD2FBB34A10028DC5A /* APP_OVERVIEW.md in Resources */,
 				CB1430BC2FBB34A10028DC5A /* DESIGN_BRIEF.md in Resources */,
+				CB5355B52FDA6E4D00A990A8 /* GoogleService-Info.plist in Resources */,
 				CB541FDD2FAC2C25002236D6 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -460,13 +537,17 @@
 			files = (
 				CBC119642FBAE58300508462 /* MockHealthDataProvider.swift in Sources */,
 				CB2D979E2FC42BB4009F117C /* Secrets.swift in Sources */,
+				CB58B7842FD10DC800D8F422 /* ExerciseAnalysisEngine.swift in Sources */,
 				CB2D979C2FC42B5B009F117C /* WorkoutRecommendationView.swift in Sources */,
 				CB541FDB2FAC2C1F002236D6 /* ContentView.swift in Sources */,
 				CBC1198B2FBAE59500508462 /* WorkoutDetailView.swift in Sources */,
 				CB4D16F32FC464F3003ACB25 /* AnimatedGIFView.swift in Sources */,
+				CBF92C122FC710C600B7809E /* AuthComponents.swift in Sources */,
+				CBF92C162FC710E100B7809E /* OnboardingView.swift in Sources */,
 				CBA1B2C12FC50000003ACB25 /* ProfileToolbarButton.swift in Sources */,
 				CB2D97922FC42B3D009F117C /* RuleBasedWorkoutRecommender.swift in Sources */,
 				CBC1198A2FBAE59500508462 /* WorkoutListView.swift in Sources */,
+				CB58B7832FD10DC800D8F422 /* ExerciseDetector.swift in Sources */,
 				CB2D979B2FC42B5B009F117C /* WorkoutHistoryView.swift in Sources */,
 				CBC119912FBAE59500508462 /* AppConstants.swift in Sources */,
 				CB1430B82FBB2CA20028DC5A /* HealthSnapshot.swift in Sources */,
@@ -476,6 +557,7 @@
 				CB2D97932FC42B3D009F117C /* MockCalorieEstimator.swift in Sources */,
 				CB2D97812FC42B26009F117C /* WorkoutIntensity.swift in Sources */,
 				CB2D97952FC42B3D009F117C /* FallbackProviders.swift in Sources */,
+				CBF92C152FC710E100B7809E /* AuthService.swift in Sources */,
 				CBC1198C2FBAE59500508462 /* ActiveSessionView.swift in Sources */,
 				CB2D97802FC42B26009F117C /* RecommendationInput.swift in Sources */,
 				CBC119852FBAE59500508462 /* HomeView.swift in Sources */,
@@ -488,20 +570,28 @@
 				CB2D978E2FC42B3D009F117C /* APINinjasExerciseCatalog.swift in Sources */,
 				CBC119862FBAE59500508462 /* PoseDetectionView.swift in Sources */,
 				CB2D97832FC42B26009F117C /* WorkoutPlan.swift in Sources */,
+				CB356CFD2FD92DBE007E0A44 /* SquatFormClassifier.mlmodel in Sources */,
 				CBC1195A2FBAE56A00508462 /* WorkoutSession.swift in Sources */,
 				CB2D97822FC42B26009F117C /* WorkoutSessionRecord.swift in Sources */,
 				CBC1198E2FBAE59500508462 /* ProfileView.swift in Sources */,
 				CB2D97912FC42B3D009F117C /* RecommendationProtocols.swift in Sources */,
+				CB58B7802FD10DC800D8F422 /* LungeFormAnalyzer.swift in Sources */,
 				CBC1195B2FBAE56A00508462 /* Workout.swift in Sources */,
 				CBC1198D2FBAE59500508462 /* HealthDashboardView.swift in Sources */,
 				CBC119952FBAE59500508462 /* WorkoutViewModel.swift in Sources */,
 				CB2D97842FC42B26009F117C /* ExerciseTemplate.swift in Sources */,
+				CBF92C112FC710C600B7809E /* LoginView.swift in Sources */,
 				CBC1195D2FBAE56A00508462 /* Exercise.swift in Sources */,
+				CBF92C132FC710C600B7809E /* RegisterView.swift in Sources */,
 				CB2D979A2FC42B5B009F117C /* WorkoutPlanDetailView.swift in Sources */,
 				CB2D978F2FC42B3D009F117C /* APINinjasCalorieEstimator.swift in Sources */,
 				CB2D97902FC42B3D009F117C /* MockExerciseCatalog.swift in Sources */,
+				CB58B7812FD10DC800D8F422 /* PushUpFormAnalyzer.swift in Sources */,
 				CBC119622FBAE58300508462 /* HealthDataProvider.swift in Sources */,
 				CBC119932FBAE59500508462 /* PoseDetectionViewModel.swift in Sources */,
+				CB7A000200000000FFFF0001 /* SquatFormAnalyzer.swift in Sources */,
+				CB58B7822FD10DC800D8F422 /* SquatMLClassifier.swift in Sources */,
+				CB7A000500000000FFFF0001 /* ImagePoseTestView.swift in Sources */,
 				CBC119892FBAE59500508462 /* ExerciseRowView.swift in Sources */,
 				CBC1198F2FBAE59500508462 /* A2ACoachingView.swift in Sources */,
 				CB2D97942FC42B3D009F117C /* DefaultSafetyPolicy.swift in Sources */,
@@ -633,9 +723,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FitnessCoachApp/FitnessCoachApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FitnessCoachApp/Preview Content\"";
+				DEVELOPMENT_TEAM = MGUFYQ4S2L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FitnessCoachApp/Info.plist;
@@ -644,8 +736,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = njxzc.edu.cn.FitnessCoachApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kenneth.FitnessCoachApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -658,9 +751,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FitnessCoachApp/FitnessCoachApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FitnessCoachApp/Preview Content\"";
+				DEVELOPMENT_TEAM = MGUFYQ4S2L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FitnessCoachApp/Info.plist;
@@ -669,8 +764,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = njxzc.edu.cn.FitnessCoachApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kenneth.FitnessCoachApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -699,6 +795,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CBF92C022FC70BB100B7809E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CBF92C032FC70BB100B7809E /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBF92C022FC70BB100B7809E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		CBF92C052FC70BB100B7809E /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBF92C022FC70BB100B7809E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		CBF92C072FC70BB100B7809E /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CBF92C022FC70BB100B7809E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CB541FCD2FAC2C1F002236D6 /* Project object */;
 }

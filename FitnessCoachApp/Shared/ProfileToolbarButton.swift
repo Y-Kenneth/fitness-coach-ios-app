@@ -9,7 +9,8 @@ struct ProfileToolbarButton: View {
     var body: some View {
         Button(action: { showingProfile = true }) {
             Group {
-                if UIImage(named: "profile_photo") != nil {
+                if profileVM.profile.name.trimmingCharacters(in: .whitespaces).lowercased() == "yakhe kenneth",
+                   UIImage(named: "profile_photo") != nil {
                     Image("profile_photo")
                         .resizable()
                         .scaledToFill()

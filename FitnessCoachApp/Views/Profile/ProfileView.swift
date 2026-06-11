@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var profileVM: ProfileViewModel
     @EnvironmentObject private var workoutVM: WorkoutViewModel
+    @EnvironmentObject private var auth: AuthService
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -17,6 +18,7 @@ struct ProfileView: View {
                     allTimeStats
                     personalInfoSection
                     fitnessGoalsSection
+                    signOutSection
                 }
                 .padding(.horizontal, AppConstants.Spacing.md)
                 .padding(.top, 24)
@@ -36,7 +38,8 @@ struct ProfileView: View {
     private var headerRow: some View {
         HStack(alignment: .center, spacing: 14) {
             Group {
-                if UIImage(named: "profile_photo") != nil {
+                if profileVM.profile.name.trimmingCharacters(in: .whitespaces).lowercased() == "yakhe kenneth",
+                   UIImage(named: "profile_photo") != nil {
                     Image("profile_photo")
                         .resizable()
                         .scaledToFill()
@@ -95,6 +98,33 @@ struct ProfileView: View {
         .padding(.top, 100)
     }
 
+    // MARK: Sign out
+
+    private var signOutSection: some View {
+        Button(action: {
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                auth.signOut()
+            }
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                Text("Sign Out")
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(AppConstants.Color.danger)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(AppConstants.Color.danger.opacity(0.10))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppConstants.CornerRadius.card, style: .continuous)
+                    .strokeBorder(AppConstants.Color.danger.opacity(0.25), lineWidth: 0.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: AppConstants.CornerRadius.card, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: All-time stats
 
     private var totalMinutes: Int {
@@ -134,7 +164,8 @@ struct ProfileView: View {
                                     profileVM.save()
                                 }
                             }
-                        )
+                        ),
+                        keyboardType: .numberPad
                     )
                     InfoDivider()
                     EditableInfoRow(
@@ -148,7 +179,8 @@ struct ProfileView: View {
                                     profileVM.save()
                                 }
                             }
-                        )
+                        ),
+                        keyboardType: .numberPad
                     )
                     InfoDivider()
                     EditableInfoRow(
@@ -161,7 +193,8 @@ struct ProfileView: View {
                                     profileVM.save()
                                 }
                             }
-                        )
+                        ),
+                        keyboardType: .numberPad
                     )
                     InfoDivider()
                     EditableInfoRow(
@@ -301,6 +334,7 @@ private struct BMIBand: View {
 private struct EditableInfoRow: View {
     let label: String
     @Binding var valueText: String
+    var keyboardType: UIKeyboardType = .default
     var onCommit: (() -> Void)? = nil
 
     var body: some View {
@@ -313,6 +347,7 @@ private struct EditableInfoRow: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(AppConstants.Color.textOnCard)
                 .multilineTextAlignment(.trailing)
+                .keyboardType(keyboardType)
                 .frame(maxWidth: 160)
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))

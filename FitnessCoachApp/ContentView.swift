@@ -43,7 +43,7 @@ enum FCTab: Int, CaseIterable, Identifiable {
     }
 
     /// Symbol name when the tab is *inactive*. We keep them filled for a denser
-    /// look across the bar, but you could swap to the outline versions here.
+    /// look across the bar, but the outline versions can be swapped in here.
     var inactiveIcon: String {
         switch self {
         case .home: return "house"
@@ -60,6 +60,7 @@ enum FCTab: Int, CaseIterable, Identifiable {
 struct ContentView: View {
     @StateObject private var workoutVM = WorkoutViewModel()
     @StateObject private var profileVM = ProfileViewModel()
+    @EnvironmentObject private var auth: AuthService
     @State private var selected: FCTab = .home
     @State private var showingFormCheck = false
 
@@ -88,6 +89,11 @@ struct ContentView: View {
         }
         .environmentObject(workoutVM)
         .environmentObject(profileVM)
+        .task(id: auth.uid) {
+            guard let uid = auth.uid else { return }
+            profileVM.loadFromFirestore(uid: uid)
+            workoutVM.configure(uid: uid)
+        }
         .fullScreenCover(isPresented: $showingFormCheck) {
             PoseDetectionView()
         }

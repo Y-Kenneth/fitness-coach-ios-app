@@ -8,14 +8,28 @@ final class WorkoutHistoryStore: ObservableObject {
 
     @Published private(set) var records: [WorkoutSessionRecord] = []
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private var configuredUID: String? = nil
 
-    init(filename: String = "workout_history.json") {
+    private static let appSupportDir: URL = {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        // Make sure the directory exists.
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        self.fileURL = dir.appendingPathComponent(filename)
+        return dir
+    }()
+
+    init() {
+        // Start with an anonymous placeholder path; real data loads after configure(uid:).
+        self.fileURL = Self.appSupportDir.appendingPathComponent("workout_history_anonymous.json")
+    }
+
+    /// Must be called once per login with the signed-in user's UID.
+    /// Switches storage to the user-scoped file and loads their history.
+    func configure(uid: String) {
+        guard configuredUID != uid else { return }
+        configuredUID = uid
+        fileURL = Self.appSupportDir.appendingPathComponent("workout_history_\(uid).json")
+        records = []
         load()
     }
 

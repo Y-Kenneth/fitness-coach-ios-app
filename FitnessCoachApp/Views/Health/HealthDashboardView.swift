@@ -3,6 +3,7 @@ import SwiftUI
 struct HealthDashboardView: View {
     @EnvironmentObject private var workoutVM: WorkoutViewModel
     @EnvironmentObject private var profileVM: ProfileViewModel
+    @EnvironmentObject private var auth: AuthService
     @StateObject private var vm: HealthDashboardViewModel
 
     @State private var showingCoach = false
@@ -76,7 +77,7 @@ struct HealthDashboardView: View {
                 }
             }
             .sheet(isPresented: $showingCoach) {
-                A2ACoachingView()
+                A2ACoachingView(userUID: auth.uid)
             }
             .sheet(isPresented: $showingCalendar) {
                 DatePickerSheet(
@@ -92,10 +93,18 @@ struct HealthDashboardView: View {
                 await loadSnapshot()
             }
             .onChange(of: workoutVM.isSessionActive) { isActive in
-                // Refresh the dashboard right after a workout finishes so the
-                // newly-written calories show up immediately.
                 if !isActive {
-                    Task { await vm.refresh() }
+                    Task {
+                        await vm.refresh()
+                        await loadSnapshot()
+                    }
+                }
+            }
+            .onChange(of: workoutVM.lastCompletedSessionDate) { _ in
+                // Refresh when a plan workout is marked done (doesn't toggle isSessionActive).
+                Task {
+                    await vm.refresh()
+                    await loadSnapshot()
                 }
             }
         }

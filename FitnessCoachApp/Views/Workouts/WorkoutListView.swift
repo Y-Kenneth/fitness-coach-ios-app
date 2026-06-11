@@ -50,7 +50,7 @@ struct WorkoutListView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.horizontal, AppConstants.Spacing.md)
+                            .padding(.horizontal, AppConstants.Spacing.sm)
                         }
                     }
                     .padding(.bottom, 120)

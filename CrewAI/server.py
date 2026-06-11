@@ -1,8 +1,8 @@
 # FitnessCoach CrewAI Flask Server
 #
-# Requirements (install in your active venv):
+# Requirements:
 #     pip install flask crewai
-#     (plus whatever agents.py already needs — ollama-reachable LLM)
+#     (plus dependencies from agents.py — requires an Ollama-reachable LLM)
 #
 # Run:
 #     python server.py
@@ -13,49 +13,71 @@
 import time
 from datetime import datetime, timezone
 from flask import Flask, jsonify, request
-from agents import build_fitness_crew, ollama_llm
+from agents import build_fitness_crew, ollama_llm, _summarize_snapshot
 
 app = Flask(__name__)
 
 
-# ── Follow-up chat ────────────────────────────────────────────────────────────
-# After /run returns the initial 3-agent report, the iOS app can call /chat
-# to ask follow-up questions. To keep replies fast (~20-60s vs the 2-5 min
-# full crew), /chat uses a single LLM call playing the role of the HealthKit
-# Analyst, with the original report passed in as context.
+# ── Conversational fitness coach ──────────────────────────────────────────────
+# The iOS app's AI Coach screen calls /chat for every turn. The full
+# HealthSnapshot is included so the coach knows the user's steps/calories/HR/
+# sleep/workouts from message #1 — no /run needed first.
+#
+# /run still exists for the CrewAI assignment: it kicks the full 3-agent crew
+# (verbose=True logs in the terminal). Output is NOT shown in the app.
 
 CHAT_SYSTEM_PROMPT = (
-    "You are the HealthKit Data Analyst from the FitnessCoach app — a certified "
-    "fitness coach who already produced a personalised weekly coaching report "
-    "for this user. The user is now asking follow-up questions about that "
-    "report and their fitness data.\n\n"
+    "You are FitCoach, a friendly and knowledgeable AI fitness coach inside the "
+    "FitnessCoach iOS app. You speak to one specific user whose recent Apple "
+    "Health data is given to you below. You can talk about workouts, steps, "
+    "calories, heart rate, sleep, recovery, nutrition basics, exercise form, "
+    "motivation — anything fitness or general wellness related.\n\n"
     "Guidelines:\n"
-    "- Stay in character as the friendly, knowledgeable analyst.\n"
-    "- Reference the original report and any earlier turns in this conversation.\n"
-    "- If the user asks about something the report did not cover, say so plainly "
-    "and answer based on general fitness knowledge.\n"
-    "- Keep replies concise (2-5 sentences) unless the user asks for detail.\n"
-    "- Never give medical diagnoses. Suggest seeing a professional when relevant."
+    "- Reference the user's actual numbers when relevant (e.g. \"you averaged "
+    "9,268 steps this week\"). Don't invent numbers that aren't in the data.\n"
+    "- Be conversational and warm, not clinical. Short paragraphs over long lists.\n"
+    "- Keep most replies to 2-5 sentences. Go longer only when the user asks for "
+    "a plan, breakdown, or detailed explanation.\n"
+    "- If the user asks something off-topic (coding, news, etc.), gently redirect "
+    "back to fitness and wellness.\n"
+    "- Never give medical diagnoses or prescribe treatment. Suggest seeing a "
+    "doctor or certified professional when the user describes pain, injury, or "
+    "symptoms that warrant it.\n"
+    "- If no health data is available, say so and answer with general advice."
 )
 
 
-def _build_chat_messages(original_report: str, history: list, new_question: str) -> list:
-    """Assemble the message list for the follow-up LLM call.
+def _build_chat_messages(snapshot: dict | None,
+                         original_report: str,
+                         history: list,
+                         new_question: str) -> list:
+    """Assemble the message list for the conversational coach LLM call."""
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    system_with_date = CHAT_SYSTEM_PROMPT + f"\n\nToday's date is {today_str}."
+    messages = [{"role": "system", "content": system_with_date}]
 
-    history is a list of {"role": "user"|"assistant", "content": str} dicts
-    representing prior turns in this chat session (not including new_question).
-    """
-    messages = [
-        {"role": "system", "content": CHAT_SYSTEM_PROMPT},
-        {
+    # Always inject the user's data summary if we have a snapshot, so the
+    # coach has full context even when /run has never been called.
+    if snapshot:
+        messages.append({
             "role": "system",
             "content": (
-                "Here is the original coaching report you produced for this user. "
-                "Refer back to it when answering follow-ups:\n\n"
-                f"{original_report.strip() or '(no report provided)'}"
+                "=== USER'S RECENT HEALTH DATA ===\n"
+                f"{_summarize_snapshot(snapshot)}"
             ),
-        },
-    ]
+        })
+
+    # Optional: include the CrewAI weekly report if the app passed it.
+    report = (original_report or "").strip()
+    if report:
+        messages.append({
+            "role": "system",
+            "content": (
+                "=== EARLIER COACHING REPORT (for reference) ===\n"
+                f"{report}"
+            ),
+        })
+
     for turn in history or []:
         role = turn.get("role")
         content = (turn.get("content") or "").strip()
@@ -222,11 +244,12 @@ def run():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Follow-up question against the original coaching report.
+    """Conversational coach turn.
 
     Expected JSON body:
       {
-        "original_report": "<text of the analyst's report>",
+        "snapshot": { ... HealthSnapshot JSON ... },   # optional but recommended
+        "original_report": "<text of an earlier crew report>",  # optional
         "history": [{"role": "user"|"assistant", "content": "..."}, ...],
         "question": "<the user's new question>"
       }
@@ -236,12 +259,14 @@ def chat():
     if not question:
         return jsonify({"error": "Missing 'question' in request body."}), 400
 
+    snapshot = body.get("snapshot")
     original_report = body.get("original_report") or ""
     history = body.get("history") or []
 
-    print(f"\n💬 [server] /chat received — history_turns={len(history)}, q={question[:80]!r}")
+    snap_src = (snapshot or {}).get("data_source", "none")
+    print(f"\n💬 [server] /chat — turns={len(history)}, snap={snap_src}, q={question[:80]!r}")
 
-    messages = _build_chat_messages(original_report, history, question)
+    messages = _build_chat_messages(snapshot, original_report, history, question)
 
     start = time.monotonic()
     try:

@@ -63,8 +63,11 @@ struct WorkoutRecommendationView: View {
     @StateObject private var vm = WorkoutRecommendationViewModel()
     @StateObject private var history = WorkoutHistoryStore()
     @EnvironmentObject private var workoutVM: WorkoutViewModel
+    @EnvironmentObject private var auth: AuthService
 
-    @State private var showingHistory = false
+    @State private var showingHistory  = false
+    @State private var planMarkedDone  = false
+    @State private var showDoneToast   = false
 
     var body: some View {
         NavigationStack {
@@ -83,6 +86,26 @@ struct WorkoutRecommendationView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .scrollIndicators(.hidden)
+
+                // Done toast — slides up from bottom, auto-dismisses
+                if showDoneToast {
+                    VStack {
+                        Spacer()
+                        HStack(spacing: 10) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(AppConstants.Color.accent)
+                            Text("Workout saved to history!")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 14)
+                        .background(.black.opacity(0.85), in: Capsule())
+                        .shadow(color: AppConstants.Color.accent.opacity(0.3), radius: 12)
+                        .padding(.bottom, 110)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -101,6 +124,7 @@ struct WorkoutRecommendationView: View {
                 WorkoutHistoryView(records: history.records)
             }
             .task {
+                if let uid = auth.uid { history.configure(uid: uid) }
                 await vm.onAppear(recentSessions: history.recentSummaries())
             }
         }
@@ -118,6 +142,7 @@ struct WorkoutRecommendationView: View {
         case .loaded(let plan):
             RecommendedPlanCard(
                 plan: plan,
+                isDone: planMarkedDone,
                 onStart: { startWorkout(plan) }
             )
 
@@ -127,10 +152,19 @@ struct WorkoutRecommendationView: View {
     }
 
     private func refreshRecommendation() {
+        planMarkedDone = false
+        showDoneToast  = false
         Task { await vm.recommend(recentSessions: history.recentSummaries()) }
     }
 
     private func startWorkout(_ plan: WorkoutPlan) {
+        guard !planMarkedDone else { return }
+        planMarkedDone = true
+        withAnimation(.spring(response: 0.4)) { showDoneToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            withAnimation { showDoneToast = false }
+        }
+
         let now = Date()
         let calories = Int(plan.estimatedCalories)
 
@@ -152,13 +186,14 @@ struct WorkoutRecommendationView: View {
             caloriesBurned: calories
         )
 
-        // Write to HealthKit (live device) so the ring updates immediately.
+        // Immediately reflect the burned calories in the goal ring.
+        vm.activeEnergyBurned += Double(calories)
+
+        // Write to HealthKit then re-sync so the ring stays accurate.
         Task {
             try? await workoutVM.healthProvider.writeWorkoutCalories(Double(calories), date: now)
+            await vm.onAppear(recentSessions: history.recentSummaries())
         }
-
-        // Refresh the Plan tab's own goal ring.
-        Task { await vm.onAppear(recentSessions: history.recentSummaries()) }
     }
 }
 
@@ -425,6 +460,7 @@ private struct IntensityTile: View {
 
 private struct RecommendedPlanCard: View {
     let plan: WorkoutPlan
+    var isDone: Bool = false
     let onStart: () -> Void
 
     @State private var showingDetail = false
@@ -598,19 +634,20 @@ private struct RecommendedPlanCard: View {
 
             Button(action: onStart) {
                 HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
+                    Image(systemName: isDone ? "checkmark.seal.fill" : "checkmark.circle.fill")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Mark Done")
+                    Text(isDone ? "Done!" : "Mark Done")
                         .font(.system(size: 15, weight: .semibold))
                 }
-                .foregroundStyle(.black)
+                .foregroundStyle(isDone ? .white.opacity(0.6) : .black)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
-                .background(AppConstants.Color.accent)
+                .background(isDone ? Color.gray.opacity(0.35) : AppConstants.Color.accent)
                 .clipShape(Capsule())
-                .shadow(color: AppConstants.Color.accent.opacity(0.35), radius: 10)
+                .shadow(color: isDone ? .clear : AppConstants.Color.accent.opacity(0.35), radius: 10)
             }
             .buttonStyle(.plain)
+            .disabled(isDone)
         }
     }
 }

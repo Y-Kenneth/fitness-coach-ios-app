@@ -181,9 +181,10 @@ struct ActiveSessionView: View {
             }
             .padding(.vertical, 12)
 
-            Text("Tap pause to rest · long press the timer to skip ahead")
+            Text("Tap pause to rest")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.4))
+                .padding(.bottom, 4)
         }
         .padding(.horizontal, 4)
         .background(Color.white.opacity(0.04))

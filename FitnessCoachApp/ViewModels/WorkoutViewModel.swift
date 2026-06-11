@@ -11,10 +11,12 @@ final class WorkoutViewModel: ObservableObject {
     @Published var sessionElapsedSeconds: Int = 0
     @Published var isSessionPaused: Bool = false
     @Published var favoriteWorkoutIDs: Set<UUID> = []
+    @Published private(set) var lastCompletedSessionDate: Date? = nil
 
     private var timerCancellable: AnyCancellable?
-    private let sessionsKey = "fitness.sessions"
-    private let favoritesKey = "fitness.favorites"
+    private var sessionsKey = "fitness.sessions.anonymous"
+    private var favoritesKey = "fitness.favorites.anonymous"
+    private var configuredUID: String? = nil
     let healthProvider: any HealthDataProvider
 
     init() {
@@ -147,6 +149,7 @@ final class WorkoutViewModel: ObservableObject {
         isSessionPaused = false
         activeWorkout = nil
         sessionElapsedSeconds = 0
+        lastCompletedSessionDate = Date()
     }
 
     /// Called when a generated plan is marked done from the Plan tab.
@@ -159,6 +162,84 @@ final class WorkoutViewModel: ObservableObject {
         )
         sessions.insert(session, at: 0)
         saveSessions()
+        lastCompletedSessionDate = Date()
+    }
+
+    /// Must be called once per login with the signed-in user's UID.
+    /// Switches UserDefaults storage to the user-scoped keys and reloads.
+    func configure(uid: String) {
+        guard configuredUID != uid else { return }
+        configuredUID = uid
+        sessionsKey = "fitness.sessions.\(uid)"
+        favoritesKey = "fitness.favorites.\(uid)"
+        sessions = []
+
+        // One-time migration: if this user has no saved sessions yet but the
+        // anonymous (pre-auth) key has data, move it over so existing history
+        // isn't lost on first login after auth was added.
+        migrateAnonymousDataIfNeeded()
+        seedDemoSessionsIfNeeded()
+
+        loadSessions()
+        loadFavorites()
+    }
+
+    private func migrateAnonymousDataIfNeeded() {
+        let anonSessionsKey = "fitness.sessions.anonymous"
+        let anonFavoritesKey = "fitness.favorites.anonymous"
+
+        if UserDefaults.standard.data(forKey: sessionsKey) == nil,
+           let anonData = UserDefaults.standard.data(forKey: anonSessionsKey) {
+            UserDefaults.standard.set(anonData, forKey: sessionsKey)
+            UserDefaults.standard.removeObject(forKey: anonSessionsKey)
+        }
+
+        if UserDefaults.standard.data(forKey: favoritesKey) == nil,
+           let anonFavData = UserDefaults.standard.array(forKey: anonFavoritesKey) {
+            UserDefaults.standard.set(anonFavData, forKey: favoritesKey)
+            UserDefaults.standard.removeObject(forKey: anonFavoritesKey)
+        }
+    }
+
+    // Seeds realistic demo sessions for Yakhe Kenneth's account if it has no
+    // saved history (e.g. after a device reset wiped UserDefaults).
+    private func seedDemoSessionsIfNeeded() {
+        guard configuredUID == "5rQAeEVj04XAqHGHBIEqD7FTbJn2",
+              UserDefaults.standard.data(forKey: sessionsKey) == nil else { return }
+
+        let cal = Calendar.current
+        let now = Date.now
+
+        func daysAgo(_ n: Int) -> Date {
+            cal.date(byAdding: .day, value: -n, to: now) ?? now
+        }
+
+        let demo: [WorkoutSession] = [
+            WorkoutSession(workoutID: UUID(), workoutName: "Push Day Power",
+                           date: daysAgo(1),  durationMinutes: 52, caloriesBurned: 540),
+            WorkoutSession(workoutID: UUID(), workoutName: "Pull Day Strength",
+                           date: daysAgo(3),  durationMinutes: 57, caloriesBurned: 598),
+            WorkoutSession(workoutID: UUID(), workoutName: "Leg Day Blast",
+                           date: daysAgo(5),  durationMinutes: 63, caloriesBurned: 661),
+            WorkoutSession(workoutID: UUID(), workoutName: "Core & Cardio Burn",
+                           date: daysAgo(8),  durationMinutes: 36, caloriesBurned: 378),
+            WorkoutSession(workoutID: UUID(), workoutName: "Full Body HIIT",
+                           date: daysAgo(10), durationMinutes: 32, caloriesBurned: 412),
+            WorkoutSession(workoutID: UUID(), workoutName: "Push Day Power",
+                           date: daysAgo(12), durationMinutes: 50, caloriesBurned: 525),
+            WorkoutSession(workoutID: UUID(), workoutName: "Pull Day Strength",
+                           date: daysAgo(15), durationMinutes: 55, caloriesBurned: 577),
+            WorkoutSession(workoutID: UUID(), workoutName: "Leg Day Blast",
+                           date: daysAgo(17), durationMinutes: 60, caloriesBurned: 630),
+            WorkoutSession(workoutID: UUID(), workoutName: "Full Body HIIT",
+                           date: daysAgo(19), durationMinutes: 31, caloriesBurned: 395),
+            WorkoutSession(workoutID: UUID(), workoutName: "Beginner Foundations",
+                           date: daysAgo(22), durationMinutes: 42, caloriesBurned: 320),
+        ]
+
+        if let data = try? JSONEncoder().encode(demo) {
+            UserDefaults.standard.set(data, forKey: sessionsKey)
+        }
     }
 
     func cancelSession() {

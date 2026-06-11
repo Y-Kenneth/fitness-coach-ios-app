@@ -2,6 +2,7 @@ import Foundation
 
 struct UserProfile: Codable {
     var name: String
+    var email: String
     var age: Int
     var heightCm: Double
     var weightKg: Double
@@ -11,6 +12,7 @@ struct UserProfile: Codable {
 
     init(
         name: String = "Athlete",
+        email: String = "",
         age: Int = 25,
         heightCm: Double = 170,
         weightKg: Double = 70,
@@ -19,6 +21,7 @@ struct UserProfile: Codable {
         fitnessLevel: Difficulty = .beginner
     ) {
         self.name = name
+        self.email = email
         self.age = age
         self.heightCm = heightCm
         self.weightKg = weightKg

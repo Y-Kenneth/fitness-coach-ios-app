@@ -10,8 +10,8 @@ import Foundation
 ///   5. Build a plan from the top candidate (with warm-up + cooldown).
 ///   6. Run the safety policy. If rejected, retry with adjusted inputs once.
 ///
-/// No LLMs, no probabilistic anything — given the same input you get the same
-/// output. That's the point.
+/// No LLMs, no probabilistic anything — identical inputs always produce identical
+/// outputs. That's the point.
 struct RuleBasedWorkoutRecommender: WorkoutRecommending {
 
     let catalog: ExerciseCatalogProviding

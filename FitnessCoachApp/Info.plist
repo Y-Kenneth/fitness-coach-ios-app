@@ -6,16 +6,25 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>FitCoach uses the camera to analyze your exercise form in real time. Video stays on your device and is never recorded or uploaded.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>FitCoach reads your steps, calories, workouts, heart rate, exercise minutes, and sleep to give you a personalized AI coaching report. Your health data is never used for advertising and is only sent to your local coaching server.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>FitCoach saves your workout calorie burns to Apple Health so all your activity stays in one place.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>FitCoach connects to your local AI coaching server on your home WiFi to analyze fitness data.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -40,14 +49,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>FitCoach connects to your local AI coaching server on your home WiFi to analyze fitness data.</string>
 </dict>
 </plist>
