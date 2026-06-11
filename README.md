@@ -9,14 +9,15 @@ A SwiftUI iOS application that combines real-time pose detection, HealthKit inte
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/1.png" width="180"/><br/><sub>Home</sub></td>
-    <td align="center"><img src="docs/screenshots/2.png" width="180"/><br/><sub>Workouts</sub></td>
-    <td align="center"><img src="docs/screenshots/3.png" width="180"/><br/><sub>Active Session</sub></td>
-    <td align="center"><img src="docs/screenshots/4.png" width="180"/><br/><sub>Pose Detection</sub></td>
+    <td align="center"><img src="docs/screenshots/2.png" width="180"/><br/><sub>AI Generated Plan Details</sub></td>
+    <td align="center"><img src="docs/screenshots/3.png" width="180"/><br/><sub>Workouts</sub></td>
+    <td align="center"><img src="docs/screenshots/4.png" width="180"/><br/><sub>Progress</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/5.png" width="180"/><br/><sub>Health Dashboard</sub></td>
-    <td align="center"><img src="docs/screenshots/6.png" width="180"/><br/><sub>Progress</sub></td>
-    <td align="center"><img src="docs/screenshots/7.png" width="180"/><br/><sub>Profile</sub></td>
+    <td align="center"><img src="docs/screenshots/6.png" width="180"/><br/><sub>AI Coach Bot</sub></td>
+    <td align="center"><img src="docs/screenshots/7.png" width="180"/><br/><sub>Camera Tracking Vision</sub></td>
+    <td align="center"><img src="docs/screenshots/8.png" width="180"/><br/><sub>Exercise Time</sub></td>
     <td></td>
   </tr>
 </table>
@@ -145,14 +146,3 @@ OLLAMA_HOST=0.0.0.0:11434 ollama serve
 > All three machines (iOS device, Flask server, Ollama server) must be on the same Wi-Fi network.
 
 ---
-
-## University Assignment
-
-This project was developed as a university assignment demonstrating multi-agent AI orchestration integrated with a real iOS application. The three CrewAI agents cover UI analysis, health data coaching, and quality assurance — communicating through a Flask REST API connected to a local LLM via Ollama.
-
----
-
-## Author
-
-**Yakhe Kenneth Sugiharto**  
-Software Engineering — Universitas Atma Jaya Yogyakarta (Double Degree, Nanjing)
